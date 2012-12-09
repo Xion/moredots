@@ -5,6 +5,8 @@ moredots -- root file
 import os
 import argparse
 
+import git
+
 
 def main():
     """Entry point."""
@@ -15,16 +17,33 @@ def main():
     command = args.pop('command', None)
     if command:
         command_handler = globals()['handle_%s' % command]
-        command_handler(**args)
+        return command_handler(**args)
 
 
 # Handlers for different commands
 
 def handle_init(repo_dir, home_dir):
     """Initialize dotfiles repository."""
-    # NYI
-    print "Would initialize dotfiles repo in %s, mirroring %s" % (
-        repo_dir, home_dir)
+    repo_gitdir = os.path.join(repo_dir, '.git')
+    if git.repo.fun.is_git_dir(repo_gitdir):
+        print "fatal: %s is already a Git repository" % repo_dir
+        return
+
+    repo = git.Repo.init(repo_dir, mkdir=True)
+
+    # create .mdots directory and put necessary stuff there
+    mdots_dir = os.path.join(repo_dir, '.mdots')
+    os.mkdir(mdots_dir)
+    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
+        print >>f, home_dir
+    repo.index.add(['.mdots/home'])
+
+    # prepare .gitignore
+    with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
+        print >>f, '.mdots/home'
+    repo.index.add(['.gitignore'])
+
+    repo.index.commit("[moredots] Initial setup")
 
 
 # Utility functions
