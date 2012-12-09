@@ -1,5 +1,5 @@
-moredots
-========
+moredots (WIP)
+==============
 
 Managing dotfiles with Git and grace
 
