@@ -1,2 +1,6 @@
 *.*~
+
 *.py[co]
+*.egg-info
+
+.ropeproject
