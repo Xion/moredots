@@ -46,25 +46,18 @@ def handle_init(repo_dir, home_dir):
     repo.index.commit("[moredots] Init dotfiles repository")
 
 
-def handle_add(repo_dir, filepath, hardlink):
+def handle_add(repo, filepath, hardlink):
     """Adds a dotfile to dotfiles repository."""
-    # TODO: extract this into argparse argument type, so that all functions
-    # can already get a git.Repo object instead of just path to repo
-    try:
-        repo = git.Repo(repo_dir, odbt=git.GitCmdObjectDB)
-    except git.InvalidGitRepositoryError:
-        print "fatal: %s is not a moredots repository"
-        return
 
     # TODO: add support for files inside dotdirectories, e.g. ~/.config
     _, filename = os.path.split(filepath)
     if filename.startswith('.'):
         filename = filename[1:]
     else:
-        # brittle, use os.path functions instead
+        # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    dotfile_in_repo = os.path.join(repo_dir, filename)
+    dotfile_in_repo = os.path.join(repo.working_dir, filename)
     if os.path.exists(dotfile_in_repo):
         print "fatal: %s already exists" % dotfile_in_repo
         return
@@ -77,6 +70,29 @@ def handle_add(repo_dir, filepath, hardlink):
     # commit changes
     repo.index.add([filename])
     repo.index.commit("[moredots] Add .%s" % filename)
+
+
+def handle_sync(repo, remote_url):
+    """Synchronizes dotfiles repository with a remote one.
+
+    URL will be set as 'origin' remote for the moredots Git repository.
+    In case origin already exists, it will be replaced with one
+    pointing to given URL.
+    """
+    existing_origin = getattr(repo.remotes, 'origin', None)
+    if not (existing_origin or remote_url):
+        print "fatal: no remote repository to sync with"
+        return
+
+    if remote_url and existing_origin:
+        repo.delete_remote('origin')
+        existing_origin = None
+
+    origin = existing_origin or repo.create_remote('origin', remote_url)
+
+    # TODO: implement git.RemoteProgress subclass to track progress of this
+    origin.fetch()
+    origin.push()
 
 
 # Utility functions
@@ -121,7 +137,8 @@ def create_argument_parser():
         help="Dotfile to add to repository. The leading dot can be omitted.",
     )
     add_parser.add_argument(
-        'repo_dir',
+        'repo',
+        type=git_repository,
         metavar="DIRECTORY",
         help="Specify dotfiles repository where the file should be added. "
              "By default, the repository in ~/dotfiles will be used.",
@@ -136,6 +153,36 @@ def create_argument_parser():
         default=False,
     )
 
+    sync_parser = subparsers.add_parser(
+        'sync', help="Synchronize local dotfiles repository with remote one.")
+    sync_parser.add_argument(
+        'remote_url',
+        metavar="REMOTE_URL",
+        help="Specify URL to remote dotfiles repository which should be synced.",
+        nargs='?',  # optional
+        default=None,
+    )
+    sync_parser.add_argument(
+        'repo',
+        type=git_repository,
+        metavar="DIRECTORY",
+        help="Specify local dotfiles repository to be synced with remote one. "
+             "By default, the repository in ~/dotfiles will be used.",
+        nargs='?',  # optional
+        default=os.path.expanduser('~/dotfiles'),
+    )
+
     # TODO: add subparsers for rm, install and sync
 
     return parser
+
+
+def git_repository(repo_dir):
+    """argparse argument type for converting paths to Git repositories
+    into :class:`git.Repo` objects automatically.
+    """
+    try:
+        return git.Repo(repo_dir, odbt=git.GitCmdObjectDB)
+    except git.InvalidGitRepositoryError:
+        msg = "fatal: %s is not a moredots repository" % repo_dir
+        raise argparse.ArgumentError(msg)
