@@ -43,4 +43,6 @@ def create_argument_parser():
              "on a single machine."
     )
 
+    # TODO: add subparsers for add, rm, install and sync
+
     return parser

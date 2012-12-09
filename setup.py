@@ -29,7 +29,9 @@ setup(
         'Topic :: Software Development :: Version Control',
         'Topic :: Utilities',
     ],
+
     platforms='any',
+    install_requires=open('requirements.txt').read(),
 
     packages=find_packages(),
     entry_points={
