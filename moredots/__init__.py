@@ -43,7 +43,40 @@ def handle_init(repo_dir, home_dir):
         print >>f, '.mdots/home'
     repo.index.add(['.gitignore'])
 
-    repo.index.commit("[moredots] Initial setup")
+    repo.index.commit("[moredots] Init dotfiles repository")
+
+
+def handle_add(repo_dir, filepath, hardlink):
+    """Adds a dotfile to dotfiles repository."""
+    # TODO: extract this into argparse argument type, so that all functions
+    # can already get a git.Repo object instead of just path to repo
+    try:
+        repo = git.Repo(repo_dir, odbt=git.GitCmdObjectDB)
+    except git.InvalidGitRepositoryError:
+        print "fatal: %s is not a moredots repository"
+        return
+
+    # TODO: add support for files inside dotdirectories, e.g. ~/.config
+    _, filename = os.path.split(filepath)
+    if filename.startswith('.'):
+        filename = filename[1:]
+    else:
+        # brittle, use os.path functions instead
+        filepath = filepath.replace(filename, '.%s' % filename)
+
+    dotfile_in_repo = os.path.join(repo_dir, filename)
+    if os.path.exists(dotfile_in_repo):
+        print "fatal: %s already exists" % dotfile_in_repo
+        return
+
+    # replace original dotfile with (sym)link
+    link_func = os.link if hardlink else os.symlink
+    os.rename(filepath, dotfile_in_repo)
+    link_func(dotfile_in_repo, filepath)
+
+    # commit changes
+    repo.index.add([filename])
+    repo.index.commit("[moredots] Add .%s" % filename)
 
 
 # Utility functions
@@ -57,7 +90,8 @@ def create_argument_parser():
     )
     subparsers = parser.add_subparsers(dest='command')
 
-    init_parser = subparsers.add_parser('init')
+    init_parser = subparsers.add_parser('init',
+                                        help="Initialize dotfiles repository.")
     init_parser.add_argument(
         'repo_dir',
         metavar="DIRECTORY",
@@ -78,6 +112,30 @@ def create_argument_parser():
         default=os.path.expanduser('~/'),
     )
 
-    # TODO: add subparsers for add, rm, install and sync
+    add_parser = subparsers.add_parser(
+        'add', help="Add a dotfile to repository, "
+                    "enabling it to be synced across machines.")
+    add_parser.add_argument(
+        'filepath',
+        metavar="FILE",
+        help="Dotfile to add to repository. The leading dot can be omitted.",
+    )
+    add_parser.add_argument(
+        'repo_dir',
+        metavar="DIRECTORY",
+        help="Specify dotfiles repository where the file should be added. "
+             "By default, the repository in ~/dotfiles will be used.",
+        nargs='?',  # optional
+        default=os.path.expanduser('~/dotfiles'),
+    )
+    add_parser.add_argument(
+        '--hardlink',
+        help="If provided, the dotfile will be hardlinked "
+             "rather than symlinked from home directory.",
+        action='store_true',
+        default=False,
+    )
+
+    # TODO: add subparsers for rm, install and sync
 
     return parser
