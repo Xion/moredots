@@ -36,7 +36,6 @@ def handle_init(repo_dir, home_dir):
     os.mkdir(mdots_dir)
     with open(os.path.join(mdots_dir, 'home'), 'w') as f:
         print >>f, home_dir
-    repo.index.add(['.mdots/home'])
 
     # prepare .gitignore
     with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
@@ -90,9 +89,17 @@ def handle_sync(repo, remote_url):
 
     origin = existing_origin or repo.create_remote('origin', remote_url)
 
-    # TODO: implement git.RemoteProgress subclass to track progress of this
-    origin.fetch()
-    origin.push()
+    # TODO: implement git.RemoteProgress subclass
+    # to track progress of long running git operations
+    master = repo.head.ref.name
+    try:
+        origin.pull(master)  # TODO: merging?...
+    except git.GitCommandError:
+        pass  # remote doesn't have anything yet - no biggie
+    origin.push(master)
+
+    # setting up remote branch tracking for user's convenience
+    repo.head.ref.set_tracking_branch(origin.refs.master)
 
 
 # Utility functions
