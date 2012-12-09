@@ -9,7 +9,22 @@ import argparse
 def main():
     """Entry point."""
     parser = create_argument_parser()
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
+
+    # dispatch execution depending on what command was issued
+    command = args.pop('command', None)
+    if command:
+        command_handler = globals()['handle_%s' % command]
+        command_handler(**args)
+
+
+# Handlers for different commands
+
+def handle_init(repo_dir, home_dir):
+    """Initialize dotfiles repository."""
+    # NYI
+    print "Would initialize dotfiles repo in %s, mirroring %s" % (
+        repo_dir, home_dir)
 
 
 # Utility functions
@@ -40,7 +55,8 @@ def create_argument_parser():
         help="Specify alternate home directory - that is, the directory where "
              "dotfiles are normally stored. You may want to override this "
              "if you use moredots to manage more than dotfiles repo "
-             "on a single machine."
+             "on a single machine.",
+        default=os.path.expanduser('~/'),
     )
 
     # TODO: add subparsers for add, rm, install and sync
