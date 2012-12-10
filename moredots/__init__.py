@@ -102,6 +102,38 @@ def handle_sync(repo, remote_url):
     repo.head.ref.set_tracking_branch(origin.refs.master)
 
 
+def handle_install(remote_url, repo_dir, home_dir):
+    """Installs remote dotfiles repository on this machine."""
+    repo_gitdir = os.path.join(repo_dir, '.git')
+    if git.repo.fun.is_git_dir(repo_gitdir):
+        print "fatal: %s is already a Git repository" % repo_dir
+        return
+
+    # TODO: implement progress tracking for this operation
+    git.Repo.clone_from(remote_url, repo_dir)
+
+    # create .mdots directory and put necessary stuff there
+    # TODO: this is duplicated from handle_init, move to separate function
+    mdots_dir = os.path.join(repo_dir, '.mdots')
+    os.mkdir(mdots_dir)
+    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
+        print >>f, home_dir
+
+    # (sym)link dotfiles from the repo to home directory
+    for directory, subdirs, filenames in os.walk(repo_dir):
+        for skipdir in ['.git', '.mdots']:
+            if skipdir in subdirs:
+                subdirs.remove(skipdir)
+        for filename in filenames:
+            # TODO: add support for files inside dot-directories
+            repo_path = os.path.join(repo_dir, directory, filename)
+            home_path = os.path.join(home_dir, directory, '.' + filename)
+
+            if os.path.exists(home_path):
+                os.unlink(home_path)
+            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
+
 # Utility functions
 
 def create_argument_parser():
@@ -112,6 +144,8 @@ def create_argument_parser():
         usage="mdots COMMAND [OPTIONS]",
     )
     subparsers = parser.add_subparsers(dest='command')
+
+    # TODO: reduce obvious (and non-obvious) duplications in the code below
 
     init_parser = subparsers.add_parser('init',
                                         help="Initialize dotfiles repository.")
@@ -179,7 +213,33 @@ def create_argument_parser():
         default=os.path.expanduser('~/dotfiles'),
     )
 
-    # TODO: add subparsers for rm, install and sync
+    install_parser = subparsers.add_parser(
+        'install', help="Installs dotfiles from a remote repository.")
+    install_parser.add_argument(
+        'remote_url',
+        metavar="REMOTE_URL",
+        help="Specify URL to remote dotfiles repository to be installed.",
+    )
+    install_parser.add_argument(
+        'repo_dir',
+        metavar="DIRECTORY",
+        help="Specify directory for the local dotfiles repository."
+             "By default, it will be placed in ~/dotfiles.",
+        nargs='?',  # optional
+        default=os.path.expanduser('~/dotfiles'),
+    )
+    install_parser.add_argument(
+        'home_dir',
+        metavar="HOME_DIRECTORY",
+        help="Specify alternate home directory - that is, the directory where "
+             "dotfiles are normally stored. You may want to override this "
+             "if you use moredots to manage more than dotfiles repo "
+             "on a single machine.",
+        nargs='?',  # optional
+        default=os.path.expanduser('~/'),
+    )
+
+    # TODO: add subparser for rm
 
     return parser
 
