@@ -35,7 +35,7 @@ def handle_init(repo_dir, home_dir):
     mdots_dir = os.path.join(repo_dir, '.mdots')
     os.mkdir(mdots_dir)
     with open(os.path.join(mdots_dir, 'home'), 'w') as f:
-        print >>f, home_dir
+        print >>f, os.path.abspath(home_dir)
 
     # prepare .gitignore
     with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
@@ -98,8 +98,29 @@ def handle_sync(repo, remote_url):
         pass  # remote doesn't have anything yet - no biggie
     origin.push(master)
 
-    # setting up remote branch tracking for user's convenience
+    # setting up remote branch tracking for subsequent `mdots sync`
     repo.head.ref.set_tracking_branch(origin.refs.master)
+
+    # (sym)link dotfiles from the repo to home directory
+    # TODO: this is duplicated from handle_install, extract to separate function
+    with open(os.path.join(repo.working_dir, '.mdots', 'home')) as f:
+        home_dir = f.read().strip()
+    for directory, subdirs, filenames in os.walk(repo.working_dir):
+        for skipdir in ['.git', '.mdots']:
+            if skipdir in subdirs:
+                subdirs.remove(skipdir)
+        for filename in filenames:
+            if filename.startswith('.'):  # these are repo's internal dotfiles,
+                continue                  # such as .gitignore
+
+            # TODO: add support for files inside dot-directories
+            repo_path = os.path.join(directory, filename)
+            home_path = os.path.join(home_dir, '.' + filename)
+            print repo_path, '->', home_path
+
+            if os.path.exists(home_path):
+                os.unlink(home_path)
+            os.symlink(repo_path, home_path)  # TODO: support hardlinks
 
 
 def handle_install(remote_url, repo_dir, home_dir):
@@ -117,7 +138,7 @@ def handle_install(remote_url, repo_dir, home_dir):
     mdots_dir = os.path.join(repo_dir, '.mdots')
     os.mkdir(mdots_dir)
     with open(os.path.join(mdots_dir, 'home'), 'w') as f:
-        print >>f, home_dir
+        print >>f, os.path.abspath(home_dir)
 
     # (sym)link dotfiles from the repo to home directory
     for directory, subdirs, filenames in os.walk(repo_dir):
