@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="moredots",
-    version="0.0.1",
+    version="0.0.2",
     description="Managing dotfiles with Git and grace",
     long_description=open('README.rst').read(),
     url='https://github.com/Xion/moredots',

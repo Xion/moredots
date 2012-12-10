@@ -2,6 +2,8 @@
 moredots -- root file
 :author: Karol Kuczmarski "Xion"
 """
+# TODO: it's a horrible mess -- divide it into modules, refactor & add tests
+
 import os
 import argparse
 

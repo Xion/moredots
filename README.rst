@@ -34,3 +34,11 @@ as origin so later you can simply do::
     mdots sync
 
 to synchronize any changes.
+
+Eventually, you will want to put your dotfiles on new machine. For that, you can simply do::
+
+    mdots install git@github.com:Xion/dotfiles
+    # mdots install git@github.com:Xion/dotfiles ~/dotfiles --home ~/
+
+supplying the URL to your dotfiles repository. This will put appropriate symlinks inside
+your home directory that point to files inside the dotfiles repository.
