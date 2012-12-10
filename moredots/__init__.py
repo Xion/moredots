@@ -71,6 +71,33 @@ def handle_add(repo, filepath, hardlink):
     repo.index.commit("[moredots] Add .%s" % filename)
 
 
+def handle_rm(repo, filepath):
+    """Remove dotfile from dotfiles repository and return it
+    to home directory intact.
+    """
+    with open(os.path.join(repo.working_dir, '.mdots', 'home')) as f:
+        home_dir = f.read().strip()
+
+     # TODO: add support for files inside dotdirectories, e.g. ~/.config
+    _, filename = os.path.split(filepath)
+    if filename.startswith('.'):
+        filename = filename[1:]
+    else:
+        # TODO: this is brittle, use os.path functions instead
+        filepath = filepath.replace(filename, '.%s' % filename)
+
+    filepath = os.path.join(home_dir, filepath)
+    dotfile_in_repo = os.path.join(repo.working_dir, filename)
+
+    # TODO: for hardlinks, we can simply remove the in-repo file
+    # instead of removing the home-dir file and doing the rename
+    os.unlink(filepath)
+    os.rename(dotfile_in_repo, filepath)
+
+    repo.index.remove([filename])
+    repo.index.commit("[moredots] Remove .%s" % filename)
+
+
 def handle_sync(repo, remote_url):
     """Synchronizes dotfiles repository with a remote one.
 
@@ -219,6 +246,25 @@ def create_argument_parser():
         default=False,
     )
 
+    rm_parser = subparsers.add_parser(
+        'rm', help="Remove dotfile from repository, "
+                   "returning it to home directory in its original state."
+    )
+    rm_parser.add_argument(
+        'filepath',
+        metavar="FILE",
+        help="Dotfile to remove from repository. Leading dot can be omitted.",
+    )
+    rm_parser.add_argument(
+        'repo',
+        type=git_repository,
+        metavar="DIRECTORY",
+        help="Specify dotfiles repository where the file should be added. "
+             "By default, the repository in ~/dotfiles will be used.",
+        nargs='?',  # optional
+        default=os.path.expanduser('~/dotfiles'),
+    )
+
     sync_parser = subparsers.add_parser(
         'sync', help="Synchronize local dotfiles repository with remote one.")
     sync_parser.add_argument(
@@ -263,8 +309,6 @@ def create_argument_parser():
              "on a single machine.",
         default=os.path.expanduser('~/'),
     )
-
-    # TODO: add subparser for rm
 
     return parser
 
