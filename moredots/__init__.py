@@ -125,9 +125,13 @@ def handle_install(remote_url, repo_dir, home_dir):
             if skipdir in subdirs:
                 subdirs.remove(skipdir)
         for filename in filenames:
+            if filename.startswith('.'):  # these are repo's internal dotfiles,
+                continue                  # such as .gitignore
+
             # TODO: add support for files inside dot-directories
-            repo_path = os.path.join(repo_dir, directory, filename)
-            home_path = os.path.join(home_dir, directory, '.' + filename)
+            repo_path = os.path.join(directory, filename)
+            home_path = os.path.join(home_dir, '.' + filename)
+            print repo_path, '->', home_path
 
             if os.path.exists(home_path):
                 os.unlink(home_path)
@@ -229,13 +233,13 @@ def create_argument_parser():
         default=os.path.expanduser('~/dotfiles'),
     )
     install_parser.add_argument(
-        'home_dir',
+        '--home',
+        dest='home_dir',
         metavar="HOME_DIRECTORY",
         help="Specify alternate home directory - that is, the directory where "
              "dotfiles are normally stored. You may want to override this "
              "if you use moredots to manage more than dotfiles repo "
              "on a single machine.",
-        nargs='?',  # optional
         default=os.path.expanduser('~/'),
     )
 
