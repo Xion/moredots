@@ -13,7 +13,7 @@ setup(
     url='https://github.com/Xion/moredots',
     author='Karol Kuczmarski "Xion"',
     author_email='karol.kuczmarski@gmail.com',
-    license='MIT',
+    license='GPLv3',
 
     classifiers=[
         'Development Status :: 1 - Planning',
@@ -22,7 +22,7 @@ setup(
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Information Technology',
         'Intended Audience :: System Administrators',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
         'Operating System :: Unix',
         'Programming Language :: Python',
