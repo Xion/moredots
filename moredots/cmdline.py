@@ -37,6 +37,7 @@ def configure_command_subparsers(argparser):
 
 
 def configure_init(subparsers):
+    """Configure command used to initialize an empty dotfiles repository."""
     parser = subparsers.add_parser('init',
                                    help="Initialize dotfiles repository.")
 
@@ -47,6 +48,7 @@ def configure_init(subparsers):
 
 
 def configure_add(subparsers):
+    """Configure command used to add a dotfile to dotfiles repository."""
     parser = subparsers.add_parser(
         'add', help="Add a dotfile to repository, "
                     "enabling it to be synced across machines.")
@@ -64,6 +66,7 @@ def configure_add(subparsers):
 
 
 def configure_rm(subparsers):
+    """Configure command used to remove a dotfile from dotfiles repository."""
     parser = subparsers.add_parser(
         'rm', help="Remove dotfile from repository, "
                    "returning it to home directory in its original state.")
@@ -74,6 +77,7 @@ def configure_rm(subparsers):
 
 
 def configure_sync(subparsers):
+    """Configure command used to synchronize with remote dotfiles repository."""
     parser = subparsers.add_parser(
         'sync', help="Synchronize local dotfiles repository with remote one.")
 
@@ -84,6 +88,9 @@ def configure_sync(subparsers):
 
 
 def configure_install(subparsers):
+    """Configure command used to 'install' (clone & symlink files)
+    a remote dotfiles repository.
+    """
     parser = subparsers.add_parser(
         'install', help="Installs dotfiles from a remote repository.")
 
