@@ -7,6 +7,9 @@ import argparse
 import git
 
 
+__all__ = ['create_argument_parser']
+
+
 def create_argument_parser():
     """Creates argparse command-line parser."""
     parser = argparse.ArgumentParser(
@@ -14,10 +17,26 @@ def create_argument_parser():
         description="Dotfiles manager based on Git",
         usage="mdots COMMAND [OPTIONS]",
     )
-    subparsers = parser.add_subparsers(dest='command')
+    configure_command_subparsers(parser)
+    return parser
 
-    # TODO: reduce obvious (and non-obvious) duplications in the code below
 
+# Preparing specific commands
+
+def configure_command_subparsers(argparser):
+    """Configures the subparses for handling all the moredots commands.
+    :param argparser: The :class:`argparse.ArgumentParser` object
+    """
+    subparsers = argparser.add_subparsers(dest='command')
+
+    configure_init(subparsers)
+    configure_add(subparsers)
+    configure_rm(subparsers)
+    configure_sync(subparsers)
+    configure_install(subparsers)
+
+
+def configure_init(subparsers):
     init_parser = subparsers.add_parser('init',
                                         help="Initialize dotfiles repository.")
     init_parser.add_argument(
@@ -40,24 +59,20 @@ def create_argument_parser():
         default=os.path.expanduser('~/'),
     )
 
-    add_parser = subparsers.add_parser(
+
+def configure_add(subparsers):
+    parser = subparsers.add_parser(
         'add', help="Add a dotfile to repository, "
                     "enabling it to be synced across machines.")
-    add_parser.add_argument(
+
+    parser.add_argument(
         'filepath',
         metavar="FILE",
         help="Dotfile to add to repository. The leading dot can be omitted.",
     )
-    add_parser.add_argument(
-        'repo',
-        type=git_repository,
-        metavar="DIRECTORY",
-        help="Specify dotfiles repository where the file should be added. "
-             "By default, the repository in ~/dotfiles will be used.",
-        nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
-    )
-    add_parser.add_argument(
+    add_repo_argument(parser,
+                      desc="dotfiles repository where the file should be added")
+    parser.add_argument(
         '--hardlink',
         help="If provided, the dotfile will be hardlinked "
              "rather than symlinked from home directory.",
@@ -65,46 +80,40 @@ def create_argument_parser():
         default=False,
     )
 
-    rm_parser = subparsers.add_parser(
+
+def configure_rm(subparsers):
+    parser = subparsers.add_parser(
         'rm', help="Remove dotfile from repository, "
-                   "returning it to home directory in its original state."
-    )
-    rm_parser.add_argument(
+                   "returning it to home directory in its original state.")
+
+    parser.add_argument(
         'filepath',
         metavar="FILE",
         help="Dotfile to remove from repository. Leading dot can be omitted.",
     )
-    rm_parser.add_argument(
-        'repo',
-        type=git_repository,
-        metavar="DIRECTORY",
-        help="Specify dotfiles repository where the file should be added. "
-             "By default, the repository in ~/dotfiles will be used.",
-        nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
-    )
+    add_repo_argument(
+        parser, desc="dotfiles repository that the file should be removed from")
 
-    sync_parser = subparsers.add_parser(
+
+def configure_sync(subparsers):
+    parser = subparsers.add_parser(
         'sync', help="Synchronize local dotfiles repository with remote one.")
-    sync_parser.add_argument(
+
+    parser.add_argument(
         'remote_url',
         metavar="REMOTE_URL",
         help="Specify URL to remote dotfiles repository which should be synced.",
         nargs='?',  # optional
         default=None,
     )
-    sync_parser.add_argument(
-        'repo',
-        type=git_repository,
-        metavar="DIRECTORY",
-        help="Specify local dotfiles repository to be synced with remote one. "
-             "By default, the repository in ~/dotfiles will be used.",
-        nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
-    )
+    add_repo_argument(
+        parser, desc="local dotfiles repository to be synced with remote one")
 
+
+def configure_install(subparsers):
     install_parser = subparsers.add_parser(
         'install', help="Installs dotfiles from a remote repository.")
+
     install_parser.add_argument(
         'remote_url',
         metavar="REMOTE_URL",
@@ -129,8 +138,33 @@ def create_argument_parser():
         default=os.path.expanduser('~/'),
     )
 
-    return parser
 
+# Common parameters
+
+def add_repo_argument(parser, *args, **kwargs):
+    """Include the argument representing existing, local moredots repository.
+
+    :param desc: Description of the repo argument, which can be somewhat
+                 specific to particular command
+
+    Depending on what parameters this function receives, the argument can be
+    made into positional one or a flag. The former is the default, though.
+    """
+    args = args or ('repo',)
+    desc = kwargs.pop('desc', "local dotfiles repository")
+
+    kwargs.update(
+        type=git_repository,
+        metavar="DIRECTORY",
+        help="Specify %s. By default, "
+             "the repository in ~/dotfiles will be used." % desc,
+        nargs='?',  # optional
+        default=os.path.expanduser('~/dotfiles'),
+    )
+    parser.add_argument(*args, **kwargs)
+
+
+# Utility functions
 
 def git_repository(repo_dir):
     """argparse argument type for converting paths to Git repositories
