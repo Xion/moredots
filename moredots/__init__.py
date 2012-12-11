@@ -187,4 +187,3 @@ def handle_install(remote_url, repo_dir, home_dir):
             if os.path.exists(home_path):
                 os.unlink(home_path)
             os.symlink(repo_path, home_path)  # TODO: support hardlinks
-

@@ -37,18 +37,13 @@ def configure_command_subparsers(argparser):
 
 
 def configure_init(subparsers):
-    init_parser = subparsers.add_parser('init',
-                                        help="Initialize dotfiles repository.")
-    init_parser.add_argument(
-        'repo_dir',
-        metavar="DIRECTORY",
-        help="Specify directory where the dotfiles repository "
-             "should be created. By default, ~/dotfiles will be used. "
-             "If directory path doesn't exist, it will be created.",
-        nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
-    )
-    init_parser.add_argument(
+    parser = subparsers.add_parser('init',
+                                   help="Initialize dotfiles repository.")
+
+    add_repo_argument(
+        parser, existing=False,
+        desc="directory where the dotfiles repository should be created")
+    parser.add_argument(
         '--home',
         dest='home_dir',
         metavar="HOME_DIRECTORY",
@@ -111,23 +106,17 @@ def configure_sync(subparsers):
 
 
 def configure_install(subparsers):
-    install_parser = subparsers.add_parser(
+    parser = subparsers.add_parser(
         'install', help="Installs dotfiles from a remote repository.")
 
-    install_parser.add_argument(
+    parser.add_argument(
         'remote_url',
         metavar="REMOTE_URL",
         help="Specify URL to remote dotfiles repository to be installed.",
     )
-    install_parser.add_argument(
-        'repo_dir',
-        metavar="DIRECTORY",
-        help="Specify directory for the local dotfiles repository."
-             "By default, it will be placed in ~/dotfiles.",
-        nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
-    )
-    install_parser.add_argument(
+    add_repo_argument(parser, existing=False,
+                      desc="directory for the local dotfiles repository")
+    parser.add_argument(
         '--home',
         dest='home_dir',
         metavar="HOME_DIRECTORY",
@@ -142,25 +131,33 @@ def configure_install(subparsers):
 # Common parameters
 
 def add_repo_argument(parser, *args, **kwargs):
-    """Include the argument representing existing, local moredots repository.
+    """Include the argument representing local moredots repository.
 
+    :param existing: Whether the repo is expected to existing or not.
+                     Must be supplied as keyword. ``True`` by default.
     :param desc: Description of the repo argument, which can be somewhat
-                 specific to particular command
+                 specific to particular command. Must be supplied as keyword.
 
     Depending on what parameters this function receives, the argument can be
     made into positional one or a flag. The former is the default, though.
     """
     args = args or ('repo',)
     desc = kwargs.pop('desc', "local dotfiles repository")
+    existing = kwargs.pop('existing', True)
 
+    # prepare keyword arguments dict
+    help_text = (
+        "By default, the repository in ~/dotfiles will be used."
+        if existing else "By default, it will be placed in ~/dotfiles.")
     kwargs.update(
-        type=git_repository,
         metavar="DIRECTORY",
-        help="Specify %s. By default, "
-             "the repository in ~/dotfiles will be used." % desc,
+        help="Specify %s. %s" % (desc, help_text),
         nargs='?',  # optional
         default=os.path.expanduser('~/dotfiles'),
     )
+    if existing:
+        kwargs['type'] = git_repository
+
     parser.add_argument(*args, **kwargs)
 
 
