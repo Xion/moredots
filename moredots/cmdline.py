@@ -43,16 +43,7 @@ def configure_init(subparsers):
     add_repo_argument(
         parser, existing=False,
         desc="directory where the dotfiles repository should be created")
-    parser.add_argument(
-        '--home',
-        dest='home_dir',
-        metavar="HOME_DIRECTORY",
-        help="Specify alternate home directory - that is, the directory where "
-             "dotfiles are normally stored. You may want to override this "
-             "if you use moredots to manage more than dotfiles repo "
-             "on a single machine.",
-        default=os.path.expanduser('~/'),
-    )
+    add_home_dir_argument(parser)
 
 
 def configure_add(subparsers):
@@ -60,11 +51,7 @@ def configure_add(subparsers):
         'add', help="Add a dotfile to repository, "
                     "enabling it to be synced across machines.")
 
-    parser.add_argument(
-        'filepath',
-        metavar="FILE",
-        help="Dotfile to add to repository. The leading dot can be omitted.",
-    )
+    add_filepath_argument(parser, purpose="add to repository")
     add_repo_argument(parser,
                       desc="dotfiles repository where the file should be added")
     parser.add_argument(
@@ -81,11 +68,7 @@ def configure_rm(subparsers):
         'rm', help="Remove dotfile from repository, "
                    "returning it to home directory in its original state.")
 
-    parser.add_argument(
-        'filepath',
-        metavar="FILE",
-        help="Dotfile to remove from repository. Leading dot can be omitted.",
-    )
+    add_filepath_argument(parser, purpose="remove from repository")
     add_repo_argument(
         parser, desc="dotfiles repository that the file should be removed from")
 
@@ -94,13 +77,8 @@ def configure_sync(subparsers):
     parser = subparsers.add_parser(
         'sync', help="Synchronize local dotfiles repository with remote one.")
 
-    parser.add_argument(
-        'remote_url',
-        metavar="REMOTE_URL",
-        help="Specify URL to remote dotfiles repository which should be synced.",
-        nargs='?',  # optional
-        default=None,
-    )
+    add_remote_url_argument(parser, required=False,
+                            desc="remote dotfiles repository to sync with")
     add_repo_argument(
         parser, desc="local dotfiles repository to be synced with remote one")
 
@@ -109,23 +87,11 @@ def configure_install(subparsers):
     parser = subparsers.add_parser(
         'install', help="Installs dotfiles from a remote repository.")
 
-    parser.add_argument(
-        'remote_url',
-        metavar="REMOTE_URL",
-        help="Specify URL to remote dotfiles repository to be installed.",
-    )
+    add_remote_url_argument(parser, required=True,
+                            desc="remote dotfiles repository to install")
     add_repo_argument(parser, existing=False,
                       desc="directory for the local dotfiles repository")
-    parser.add_argument(
-        '--home',
-        dest='home_dir',
-        metavar="HOME_DIRECTORY",
-        help="Specify alternate home directory - that is, the directory where "
-             "dotfiles are normally stored. You may want to override this "
-             "if you use moredots to manage more than dotfiles repo "
-             "on a single machine.",
-        default=os.path.expanduser('~/'),
-    )
+    add_home_dir_argument(parser)
 
 
 # Common parameters
@@ -141,9 +107,10 @@ def add_repo_argument(parser, *args, **kwargs):
     Depending on what parameters this function receives, the argument can be
     made into positional one or a flag. The former is the default, though.
     """
-    args = args or ('repo',)
     desc = kwargs.pop('desc', "local dotfiles repository")
     existing = kwargs.pop('existing', True)
+
+    args = args or ['repo' if existing else 'repo_dir']
 
     # prepare keyword arguments dict
     help_text = (
@@ -159,6 +126,57 @@ def add_repo_argument(parser, *args, **kwargs):
         kwargs['type'] = git_repository
 
     parser.add_argument(*args, **kwargs)
+
+
+def add_filepath_argument(parser, purpose=None):
+    """Include the argument which is a path to a dotfile.
+
+    :param purpose: Description of what will be done to the dotfile.
+                    This is specific to particular command.
+    """
+    parser.add_argument(
+        'filepath',
+        metavar="FILE",
+        help="Dotfile %s. The leading dot can be omitted." % (
+            "to " + purpose if purpose else "path")
+    )
+
+
+def add_remote_url_argument(parser, required=False, desc=None):
+    """Include the argument which asks for URL to remote dotfiles repository.
+
+    :param required: Whether the argument must be supplied.
+                     If ``False`` and it's omitted, default value of ``None``
+                     will be used.
+    :param desc: Description of the URL argument. This is somewhat specific
+                 to the particular command.
+    """
+    desc = desc or "remote dotfiles repository"
+
+    kwargs = dict(
+        metavar="REMOTE_URL",
+        help="Specify URL to %s." % desc,
+    )
+    if not required:
+        kwargs.update(nargs='?', default=None)
+
+    parser.add_argument('remote_url', **kwargs)
+
+
+def add_home_dir_argument(parser):
+    """Include the argument that allows to override what is considered
+    a home directory (the one where dotfiles are normally stored).
+    """
+    parser.add_argument(
+        '--home',
+        dest='home_dir',
+        metavar="HOME_DIRECTORY",
+        help="Specify alternate home directory - that is, the directory where "
+             "dotfiles are normally stored. You may want to override this "
+             "if you use moredots to manage more than dotfiles repo "
+             "on a single machine.",
+        default=os.path.expanduser('~/'),
+    )
 
 
 # Utility functions
