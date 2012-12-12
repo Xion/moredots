@@ -9,6 +9,7 @@ import os
 import git
 
 from moredots.cmdline import create_argument_parser
+from moredots.files import move_dotfile_to_repo, remove_dotfile_from_repo
 
 
 def main():
@@ -59,15 +60,7 @@ def handle_add(repo, filepath, hardlink):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    dotfile_in_repo = os.path.join(repo.working_dir, filename)
-    if os.path.exists(dotfile_in_repo):
-        print "fatal: %s already exists" % dotfile_in_repo
-        return
-
-    # replace original dotfile with (sym)link
-    link_func = os.link if hardlink else os.symlink
-    os.rename(filepath, dotfile_in_repo)
-    link_func(dotfile_in_repo, filepath)
+    move_dotfile_to_repo(filepath, repo, hardlink)
 
     # commit changes
     repo.index.add([filename])
@@ -78,9 +71,6 @@ def handle_rm(repo, filepath):
     """Remove dotfile from dotfiles repository and return it
     to home directory intact.
     """
-    with open(os.path.join(repo.working_dir, '.mdots', 'home')) as f:
-        home_dir = f.read().strip()
-
      # TODO: add support for files inside dotdirectories, e.g. ~/.config
     _, filename = os.path.split(filepath)
     if filename.startswith('.'):
@@ -89,13 +79,7 @@ def handle_rm(repo, filepath):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    filepath = os.path.join(home_dir, filepath)
-    dotfile_in_repo = os.path.join(repo.working_dir, filename)
-
-    # TODO: for hardlinks, we can simply remove the in-repo file
-    # instead of removing the home-dir file and doing the rename
-    os.unlink(filepath)
-    os.rename(dotfile_in_repo, filepath)
+    remove_dotfile_from_repo(filepath, repo)
 
     repo.index.remove([filename])
     repo.index.commit("[moredots] Remove .%s" % filename)
