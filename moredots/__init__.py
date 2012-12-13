@@ -9,7 +9,8 @@ import os
 import git
 
 from moredots.cmdline import create_argument_parser
-from moredots.files import move_dotfile_to_repo, remove_dotfile_from_repo
+from moredots.files import (
+    move_dotfile_to_repo, remove_dotfile_from_repo, install_dotfiles)
 
 
 def main():
@@ -115,26 +116,7 @@ def handle_sync(repo, remote_url):
     # setting up remote branch tracking for subsequent `mdots sync`
     repo.head.ref.set_tracking_branch(origin.refs.master)
 
-    # (sym)link dotfiles from the repo to home directory
-    # TODO: this is duplicated from handle_install, extract to separate function
-    with open(os.path.join(repo.working_dir, '.mdots', 'home')) as f:
-        home_dir = f.read().strip()
-    for directory, subdirs, filenames in os.walk(repo.working_dir):
-        for skipdir in ['.git', '.mdots']:
-            if skipdir in subdirs:
-                subdirs.remove(skipdir)
-        for filename in filenames:
-            if filename.startswith('.'):  # these are repo's internal dotfiles,
-                continue                  # such as .gitignore
-
-            # TODO: add support for files inside dot-directories
-            repo_path = os.path.join(directory, filename)
-            home_path = os.path.join(home_dir, '.' + filename)
-            print repo_path, '->', home_path
-
-            if os.path.exists(home_path):
-                os.unlink(home_path)
-            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+    install_dotfiles(repo)
 
 
 def handle_install(remote_url, repo_dir, home_dir):
@@ -145,7 +127,7 @@ def handle_install(remote_url, repo_dir, home_dir):
         return
 
     # TODO: implement progress tracking for this operation
-    git.Repo.clone_from(remote_url, repo_dir)
+    repo = git.Repo.clone_from(remote_url, repo_dir)
 
     # create .mdots directory and put necessary stuff there
     # TODO: this is duplicated from handle_init, move to separate function
@@ -154,20 +136,4 @@ def handle_install(remote_url, repo_dir, home_dir):
     with open(os.path.join(mdots_dir, 'home'), 'w') as f:
         print >>f, os.path.abspath(home_dir)
 
-    # (sym)link dotfiles from the repo to home directory
-    for directory, subdirs, filenames in os.walk(repo_dir):
-        for skipdir in ['.git', '.mdots']:
-            if skipdir in subdirs:
-                subdirs.remove(skipdir)
-        for filename in filenames:
-            if filename.startswith('.'):  # these are repo's internal dotfiles,
-                continue                  # such as .gitignore
-
-            # TODO: add support for files inside dot-directories
-            repo_path = os.path.join(directory, filename)
-            home_path = os.path.join(home_dir, '.' + filename)
-            print repo_path, '->', home_path
-
-            if os.path.exists(home_path):
-                os.unlink(home_path)
-            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+    install_dotfiles(repo)

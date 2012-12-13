@@ -6,6 +6,32 @@ dotfile repository.
 import os
 
 
+def install_dotfiles(repo):
+    """Install all tracked dotfiles from given repo, (sym)linking
+    to them from home directory.
+    """
+    home_dir = get_home_dir(repo)
+
+    for directory, subdirs, filenames in os.walk(repo.working_dir):
+        for skipdir in ['.git', '.mdots']:
+            if skipdir in subdirs:
+                subdirs.remove(skipdir)
+
+        for filename in filenames:
+            if filename.startswith('.'):  # these are repo's internal dotfiles,
+                continue                  # such as .gitignore
+
+            # TODO: add support for files inside dot-directories
+            repo_path = os.path.join(directory, filename)
+            home_path = os.path.join(home_dir, '.' + filename)
+
+            if os.path.exists(home_path):
+                os.unlink(home_path)
+            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
+
+# Adding and removing files
+
 def move_dotfile_to_repo(filepath, repo, hardlink=False):
     """Moves the dotfile from specified filepath into the dotfile repository.
 
