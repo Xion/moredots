@@ -9,8 +9,8 @@ import os
 import git
 
 from moredots.cmdline import create_argument_parser
-from moredots.files import (
-    move_dotfile_to_repo, remove_dotfile_from_repo, install_dotfiles)
+from moredots.files import (install_dotfiles, set_home_dir,
+                            move_dotfile_to_repo, remove_dotfile_from_repo)
 
 
 def main():
@@ -35,12 +35,7 @@ def handle_init(repo_dir, home_dir):
         return
 
     repo = git.Repo.init(repo_dir, mkdir=True)
-
-    # create .mdots directory and put necessary stuff there
-    mdots_dir = os.path.join(repo_dir, '.mdots')
-    os.mkdir(mdots_dir)
-    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
-        print >>f, os.path.abspath(home_dir)
+    set_home_dir(repo, home_dir)
 
     # prepare .gitignore
     with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
@@ -129,11 +124,5 @@ def handle_install(remote_url, repo_dir, home_dir):
     # TODO: implement progress tracking for this operation
     repo = git.Repo.clone_from(remote_url, repo_dir)
 
-    # create .mdots directory and put necessary stuff there
-    # TODO: this is duplicated from handle_init, move to separate function
-    mdots_dir = os.path.join(repo_dir, '.mdots')
-    os.mkdir(mdots_dir)
-    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
-        print >>f, os.path.abspath(home_dir)
-
+    set_home_dir(repo, home_dir)
     install_dotfiles(repo)

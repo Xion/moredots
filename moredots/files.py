@@ -95,7 +95,26 @@ def remove_dotfile_from_repo(filepath, repo):
     return True
 
 
-# Utility functions
+# Setting and getting home directory for a dotfile repo
+
+def set_home_dir(repo, home_dir):
+    """Sets the path for home directory associated with dotfiles repo.
+
+    :param repo: :class:`git.Repo` object
+    :param home_dir: Path to home directory
+    """
+    # make sure .mdots directory exists
+    mdots_dir = os.path.join(repo.working_dir, '.mdots')
+    try:
+        os.mkdir(mdots_dir)
+    except OSError, e:
+        if getattr(e, 'errno', 0) != 17:  # 17 == directory exists
+            raise
+
+    # TODO: store this in `mdots_home` file inside repo `.git` directory
+    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
+        print >>f, os.path.abspath(home_dir)
+
 
 def get_home_dir(repo):
     """Retrieves the path for home directory associated with dotfiles repo.
