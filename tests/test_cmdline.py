@@ -1,12 +1,49 @@
 """
 Unit tests for command line parser.
 """
+import git
+
 from moredots.cmdline import create_argument_parser
 
 import pytest
 
 
 # Tests
+
+class TestAdd(object):
+
+    FILEPATH = "./.foobar"
+
+    def test_without_args(self, argparser):
+        with pytest.raises(SystemExit):
+            argparser.parse_args(['add'])
+
+    def test_with_filepath_arg(self, argparser):
+        args = argparser.parse_args(['add', self.FILEPATH])
+        assert args.filepath == self.FILEPATH
+        assert not args.hardlink
+
+    def test_with_filepath_and_repo_arg(self, argparser, git_repo):
+        args = argparser.parse_args([
+            'add', self.FILEPATH, git_repo.working_dir])
+
+        assert args.filepath == self.FILEPATH
+        assert args.repo.working_dir == git_repo.working_dir
+        assert not args.hardlink
+
+    def test_with_filepath_and_hardlink_arg(self, argparser):
+        args = argparser.parse_args(['add', self.FILEPATH, '--hardlink'])
+        assert args.filepath == self.FILEPATH
+        assert args.hardlink
+
+    def test_with_all_args(self, argparser, git_repo):
+        args = argparser.parse_args([
+            'add', self.FILEPATH, git_repo.working_dir, '--hardlink'])
+
+        assert args.filepath == self.FILEPATH
+        assert args.repo.working_dir == git_repo.working_dir
+        assert args.hardlink
+
 
 class TestInit(object):
 
@@ -69,3 +106,9 @@ class TestInstall(object):
 def argparser():
     """Provide :class:`argparse.ArgumentParser` for use by tests."""
     return create_argument_parser()
+
+
+@pytest.fixture
+def git_repo(tmpdir):
+    """Provides a local Git repository, created in a temporary directory."""
+    return git.Repo.init(str(tmpdir))
