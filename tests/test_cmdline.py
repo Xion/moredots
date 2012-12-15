@@ -100,6 +100,24 @@ class TestInstall(object):
         assert args.home_dir == self.HOME_DIR
 
 
+class TestRm(object):
+
+    FILEPATH = "./.foobar"
+
+    def test_without_args(self, argparser):
+        with pytest.raises(SystemExit):
+            argparser.parse_args(['rm'])
+
+    def test_with_filepath_arg(self, argparser):
+        args = argparser.parse_args(['rm', self.FILEPATH])
+        assert args.filepath == self.FILEPATH
+
+    def test_with_all_args(self, argparser, git_repo):
+        args = argparser.parse_args(['rm', self.FILEPATH, git_repo.working_dir])
+        assert args.filepath == self.FILEPATH
+        assert args.repo.working_dir == git_repo.working_dir
+
+
 # Fixtures / resources
 
 @pytest.fixture
