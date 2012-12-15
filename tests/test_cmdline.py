@@ -1,8 +1,6 @@
 """
 Unit tests for command line parser.
 """
-import git
-
 from moredots.cmdline import create_argument_parser
 
 import pytest
@@ -141,9 +139,3 @@ class TestSync(object):
 def argparser():
     """Provide :class:`argparse.ArgumentParser` for use by tests."""
     return create_argument_parser()
-
-
-@pytest.fixture
-def git_repo(tmpdir):
-    """Provides a local Git repository, created in a temporary directory."""
-    return git.Repo.init(str(tmpdir))
