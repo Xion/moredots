@@ -118,6 +118,23 @@ class TestRm(object):
         assert args.repo.working_dir == git_repo.working_dir
 
 
+class TestSync(object):
+
+    URL = "file:///tmp/foo"
+
+    def test_without_args(self, argparser):
+        argparser.parse_args(['sync'])
+
+    def test_with_url_arg(self, argparser):
+        args = argparser.parse_args(['sync', self.URL])
+        assert args.remote_url == self.URL
+
+    def test_with_all_args(self, argparser, git_repo):
+        args = argparser.parse_args(['sync', self.URL, git_repo.working_dir])
+        assert args.remote_url == self.URL
+        assert args.repo.working_dir == git_repo.working_dir
+
+
 # Fixtures / resources
 
 @pytest.fixture
