@@ -32,6 +32,7 @@ setup(
 
     platforms='any',
     install_requires=open('requirements.txt').read(),
+    tests_require=['pytest'],
 
     packages=find_packages(),
     entry_points={
