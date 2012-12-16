@@ -9,8 +9,8 @@ import os
 import git
 
 from moredots.cmdline import create_argument_parser
-from moredots.files import (install_dotfiles, set_home_dir,
-                            move_dotfile_to_repo, remove_dotfile_from_repo)
+from moredots.files import move_dotfile_to_repo, remove_dotfile_from_repo
+from moredots.repo import DotfileRepo
 
 
 def main():
@@ -34,15 +34,7 @@ def handle_init(repo_dir, home_dir):
         print "fatal: %s is already a Git repository" % repo_dir
         return
 
-    repo = git.Repo.init(repo_dir, mkdir=True)
-    set_home_dir(repo, home_dir)
-
-    # prepare .gitignore
-    with open(os.path.join(repo_dir, '.gitignore'), 'w') as f:
-        print >>f, '.mdots/home'
-    repo.index.add(['.gitignore'])
-
-    repo.index.commit("[moredots] Init dotfiles repository")
+    DotfileRepo.init(repo_dir, home_dir)
 
 
 def handle_add(repo, filepath, hardlink):
@@ -82,36 +74,7 @@ def handle_rm(repo, filepath):
 
 
 def handle_sync(repo, remote_url):
-    """Synchronizes dotfiles repository with a remote one.
-
-    URL will be set as 'origin' remote for the moredots Git repository.
-    In case origin already exists, it will be replaced with one
-    pointing to given URL.
-    """
-    existing_origin = getattr(repo.remotes, 'origin', None)
-    if not (existing_origin or remote_url):
-        print "fatal: no remote repository to sync with"
-        return
-
-    if remote_url and existing_origin:
-        repo.delete_remote('origin')
-        existing_origin = None
-
-    origin = existing_origin or repo.create_remote('origin', remote_url)
-
-    # TODO: implement git.RemoteProgress subclass
-    # to track progress of long running git operations
-    master = repo.head.ref.name
-    try:
-        origin.pull(master)  # TODO: merging?...
-    except git.GitCommandError:
-        pass  # remote doesn't have anything yet - no biggie
-    origin.push(master)
-
-    # setting up remote branch tracking for subsequent `mdots sync`
-    repo.head.ref.set_tracking_branch(origin.refs.master)
-
-    install_dotfiles(repo)
+    DotfileRepo(repo).sync(remote_url)
 
 
 def handle_install(remote_url, repo_dir, home_dir):
@@ -121,8 +84,4 @@ def handle_install(remote_url, repo_dir, home_dir):
         print "fatal: %s is already a Git repository" % repo_dir
         return
 
-    # TODO: implement progress tracking for this operation
-    repo = git.Repo.clone_from(remote_url, repo_dir)
-
-    set_home_dir(repo, home_dir)
-    install_dotfiles(repo)
+    DotfileRepo.install(remote_url, repo_dir, home_dir)

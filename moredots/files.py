@@ -5,29 +5,7 @@ dotfile repository.
 """
 import os
 
-
-def install_dotfiles(repo):
-    """Install all tracked dotfiles from given repo, (sym)linking
-    to them from home directory.
-    """
-    home_dir = get_home_dir(repo)
-
-    for directory, subdirs, filenames in os.walk(repo.working_dir):
-        for skipdir in ['.git', '.mdots']:
-            if skipdir in subdirs:
-                subdirs.remove(skipdir)
-
-        for filename in filenames:
-            if filename.startswith('.'):  # these are repo's internal dotfiles,
-                continue                  # such as .gitignore
-
-            # TODO: add support for files inside dot-directories
-            repo_path = os.path.join(directory, filename)
-            home_path = os.path.join(home_dir, '.' + filename)
-
-            if os.path.exists(home_path):
-                os.unlink(home_path)
-            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+from moredots.repo import DotfileRepo
 
 
 # Adding and removing files
@@ -48,7 +26,7 @@ def move_dotfile_to_repo(filepath, repo, hardlink=False):
     """
     filepath_in_home = os.path.abspath(filepath)
 
-    home_dir = get_home_dir(repo)
+    home_dir = DotfileRepo(repo).home_dir
     relative_filepath = os.path.relpath(filepath_in_home, start=home_dir)
 
     # check for the file's existence
@@ -81,7 +59,7 @@ def remove_dotfile_from_repo(filepath, repo):
 
     # check for the links existence and remove it
     # TODO: also check if it's symlink when symlink is expected
-    home_dir = get_home_dir(repo)
+    home_dir = DotfileRepo(repo).home_dir
     filepath_in_home = os.path.normpath(
         os.path.join(home_dir, relative_filepath))
     if os.path.exists(filepath_in_home):
@@ -93,35 +71,3 @@ def remove_dotfile_from_repo(filepath, repo):
     # instead of removing the home-dir file and doing the rename
     os.rename(filepath_in_repo, filepath_in_home)
     return True
-
-
-# Setting and getting home directory for a dotfile repo
-
-def set_home_dir(repo, home_dir):
-    """Sets the path for home directory associated with dotfiles repo.
-
-    :param repo: :class:`git.Repo` object
-    :param home_dir: Path to home directory
-    """
-    # make sure .mdots directory exists
-    mdots_dir = os.path.join(repo.working_dir, '.mdots')
-    try:
-        os.mkdir(mdots_dir)
-    except OSError, e:
-        if getattr(e, 'errno', 0) != 17:  # 17 == directory exists
-            raise
-
-    # TODO: store this in `mdots_home` file inside repo `.git` directory
-    with open(os.path.join(mdots_dir, 'home'), 'w') as f:
-        print >>f, os.path.abspath(home_dir)
-
-
-def get_home_dir(repo):
-    """Retrieves the path for home directory associated with dotfiles repo.
-    :param repo: :class:`git.Repo` object
-    :return: Path to home directory
-    """
-    # TODO: would be nice to not do that repeatedly
-    # when adding/removing multiple files
-    with open(os.path.join(repo.working_dir, '.mdots', 'home')) as f:
-        return f.read().strip()

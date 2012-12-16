@@ -54,8 +54,47 @@ class DotfileRepo(object):
         :param home_dir: Driectory to be considered $HOME for the new repo.
         """
         repo = cls(git.Repo.clone_from(url, repo_dir))
+
         repo.home_dir = home_dir
+        repo._install_dotfiles()
+
         return repo
+
+    def sync(self, url=None):
+        """Synchronizes dotfiles repository with a remote one.
+
+        URL will be set as 'origin' remote for the moredots Git repository.
+        In case origin already exists, it will be replaced with one
+        pointing to given URL.
+        """
+        existing_origin = getattr(self.git_repo.remotes, 'origin', None)
+        if not (existing_origin or url):
+            return False
+
+        if url and existing_origin:
+            self.git_repo.delete_remote('origin')
+            existing_origin = None
+
+        origin = existing_origin or self.git_repo.create_remote('origin', url)
+
+        # TODO: implement git.RemoteProgress subclass
+        # to track progress of long running git operations
+        master = self.git_repo.head.ref.name
+        try:
+            origin.pull(master)  # TODO: merging?...
+        except git.GitCommandError:
+            pass  # remote doesn't have anything yet - no biggie
+        origin.push(master)
+
+        # setting up remote branch tracking for subsequent `mdots sync`
+        self.git_repo.head.ref.set_tracking_branch(origin.refs.master)
+
+        self._install_dotfiles()
+
+    @property
+    def dir(self):
+        """Path to directory where the dotfile repository resides."""
+        return self.git_repo.working_dir
 
     @objectproperty
     def home_dir():
@@ -82,3 +121,26 @@ class DotfileRepo(object):
             self._home_dir = value
 
         return locals()
+
+    # Internal methods
+
+    def _install_dotfiles(self):
+        """Install all tracked dotfiles from the repo, (sym)linking
+        to them from home directory.
+        """
+        for directory, subdirs, filenames in os.walk(self.dir):
+            for skipdir in ('.git',):
+                if skipdir in subdirs:
+                    subdirs.remove(skipdir)
+
+            for filename in filenames:
+                if filename.startswith('.'):  # these are repo's internal dotfiles,
+                    continue                  # such as .gitignore
+
+                # TODO: add support for files inside dot-directories
+                repo_path = os.path.join(directory, filename)
+                home_path = os.path.join(self.home_dir, '.' + filename)
+
+                if os.path.exists(home_path):
+                    os.unlink(home_path)
+                os.symlink(repo_path, home_path)  # TODO: support hardlinks
