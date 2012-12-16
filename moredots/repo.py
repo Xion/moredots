@@ -85,11 +85,7 @@ class DotfileRepo(object):
         os.rename(filepath_in_home, filepath_in_repo)
         link_func(filepath_in_repo, filepath_in_home)  # order like shell `ln`
 
-        # commit changes
-        _, filename = os.path.split(path)
-        self.git_repo.index.add([filename])
-        self.git_repo.index.commit("[moredots] Add .%s" % filename)
-
+        self._commit(add=relative_filepath)
         return True
 
     def remove(self, path):
@@ -114,11 +110,7 @@ class DotfileRepo(object):
         # instead of removing the home-dir file and doing the rename
         os.rename(filepath_in_repo, filepath_in_home)
 
-        # commit changes
-        _, filename = os.path.split(path)
-        self.git_repo.index.remove([filename])
-        self.git_repo.index.commit("[moredots] Remove .%s" % filename)
-
+        self._commit(remove=relative_filepath)
         return True
 
     def sync(self, url=None):
@@ -205,3 +197,31 @@ class DotfileRepo(object):
                 if os.path.exists(home_path):
                     os.unlink(home_path)
                 os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
+    def _commit(self, message=None, add=None, remove=None):
+        """Commits files to the dotfile Git repository.
+
+        :param message: Commit message.
+                        If omitted, it is constructed based on changed files.
+        :param add: Files to be added with the commit
+        :param remove: Files to be removed with the commit
+        """
+        if not (add or remove):
+            return
+
+        # modify Git index for the repo, handling given paths smartly
+        def convert_path(path):
+            return (os.path.relpath(path, start=self.dir)
+                    if os.path.isabs(path) else path)
+        if add:
+            add = [add] if isinstance(add, basestring) else add
+            self.git_repo.index.add(map(convert_path, add))
+        if remove:
+            remove = [remove] if isinstance(remove, basestring) else remove
+            self.git_repo.index.remove(map(convert_path, remove))
+
+        message = message or "; ".join(filter(None, (
+            "add %s" % ", ".join(add) if add else "",
+            "remove %s" % ", ".join(remove) if remove else "",
+        )))
+        self.git_repo.commit("[moredots] %s" % message.capitalize())
