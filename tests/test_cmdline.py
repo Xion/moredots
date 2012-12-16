@@ -26,7 +26,7 @@ class TestAdd(object):
             'add', self.FILEPATH, git_repo.working_dir])
 
         assert args.filepath == self.FILEPATH
-        assert args.repo.working_dir == git_repo.working_dir
+        assert args.repo.dir == git_repo.working_dir
         assert not args.hardlink
 
     def test_with_filepath_and_hardlink_arg(self, argparser):
@@ -39,7 +39,7 @@ class TestAdd(object):
             'add', self.FILEPATH, git_repo.working_dir, '--hardlink'])
 
         assert args.filepath == self.FILEPATH
-        assert args.repo.working_dir == git_repo.working_dir
+        assert args.repo.dir == git_repo.working_dir
         assert args.hardlink
 
 
@@ -113,7 +113,7 @@ class TestRm(object):
     def test_with_all_args(self, argparser, git_repo):
         args = argparser.parse_args(['rm', self.FILEPATH, git_repo.working_dir])
         assert args.filepath == self.FILEPATH
-        assert args.repo.working_dir == git_repo.working_dir
+        assert args.repo.dir == git_repo.working_dir
 
 
 class TestSync(object):
@@ -130,7 +130,7 @@ class TestSync(object):
     def test_with_all_args(self, argparser, git_repo):
         args = argparser.parse_args(['sync', self.URL, git_repo.working_dir])
         assert args.remote_url == self.URL
-        assert args.repo.working_dir == git_repo.working_dir
+        assert args.repo.dir == git_repo.working_dir
 
 
 # Fixtures / resources

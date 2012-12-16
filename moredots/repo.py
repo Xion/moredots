@@ -28,7 +28,7 @@ class DotfileRepo(object):
                      object representing the Git repo with moredots enhancements
         """
         if isinstance(repo, basestring):
-            repo = git.Repo(repo)
+            repo = git.Repo(repo, odbt=git.GitCmdObjectDB)
         self.git_repo = repo
 
     @classmethod

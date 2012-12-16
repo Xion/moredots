@@ -47,7 +47,7 @@ def handle_add(repo, filepath, hardlink):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    DotfileRepo(repo).add(filepath, hardlink)
+    repo.add(filepath, hardlink)
 
 
 def handle_rm(repo, filepath):
@@ -62,12 +62,12 @@ def handle_rm(repo, filepath):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    DotfileRepo(repo).remove(filepath)
+    repo.remove(filepath)
 
 
 def handle_sync(repo, remote_url):
     """Synchronize dotfile repository with a remote one."""
-    DotfileRepo(repo).sync(remote_url)
+    repo.sync(remote_url)
 
 
 def handle_install(remote_url, repo_dir, home_dir):

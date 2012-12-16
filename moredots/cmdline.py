@@ -6,6 +6,8 @@ import argparse
 
 import git
 
+from moredots.repo import DotfileRepo
+
 
 __all__ = ['create_argument_parser']
 
@@ -130,7 +132,7 @@ def add_repo_argument(parser, *args, **kwargs):
         default=os.path.expanduser('~/dotfiles'),
     )
     if existing:
-        kwargs['type'] = git_repository
+        kwargs['type'] = dotfile_repo
 
     parser.add_argument(*args, **kwargs)
 
@@ -188,12 +190,12 @@ def add_home_dir_argument(parser):
 
 # Utility functions
 
-def git_repository(repo_dir):
-    """argparse argument type for converting paths to Git repositories
-    into :class:`git.Repo` objects automatically.
+def dotfile_repo(repo_dir):
+    """argparse argument type for converting paths to moredots repositories
+    into :class:`DotfileRepo` objects automatically.
     """
     try:
-        return git.Repo(repo_dir, odbt=git.GitCmdObjectDB)
+        return DotfileRepo(repo_dir)
     except git.InvalidGitRepositoryError:
         msg = "fatal: %s is not a moredots repository" % repo_dir
         raise argparse.ArgumentError(msg)
