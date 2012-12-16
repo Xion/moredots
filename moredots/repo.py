@@ -60,6 +60,67 @@ class DotfileRepo(object):
 
         return repo
 
+    def add(self, path, hardlink=False):
+        """Moves the dotfile from specified filepath into the dotfile repository.
+
+        :param path: Path to the source dotfile. It will be replaced with
+                     a (sym)link to the file in repo
+        :param hardlink: Whether the file should be hardlinked
+                         instead of symlinked. ``False`` by default.
+
+        :return: Whether operation succeeded (boolean value)
+        """
+        filepath_in_home = os.path.abspath(path)
+        relative_filepath = os.path.relpath(filepath_in_home,
+                                            start=self.home_dir)
+
+        # check for the file's existence
+        filepath_in_repo = os.path.normpath(
+            os.path.join(self.dir, relative_filepath))
+        if os.path.exists(filepath_in_repo):
+            return False
+
+        # perform replacement, producing (sym)link in place of actual file
+        link_func = os.link if hardlink else os.symlink
+        os.rename(filepath_in_home, filepath_in_repo)
+        link_func(filepath_in_repo, filepath_in_home)  # order like shell `ln`
+
+        # commit changes
+        _, filename = os.path.split(path)
+        self.git_repo.index.add([filename])
+        self.git_repo.index.commit("[moredots] Add .%s" % filename)
+
+        return True
+
+    def remove(self, path):
+        """Removes dotfile from the dotfile repository.
+
+        :param path: Path to the dotfile inside the repo (either absolute
+                     or relative to the repo's working directory)
+
+        :return: Whether operation succeeded (boolean value)
+        """
+        filepath_in_repo = os.path.abspath(path)
+        relative_filepath = os.path.relpath(filepath_in_repo, start=self.dir)
+
+        # check for the links existence and remove it
+        # TODO: also check if it's symlink when symlink is expected
+        filepath_in_home = os.path.normpath(
+            os.path.join(self.home_dir, relative_filepath))
+        if os.path.exists(filepath_in_home):
+            os.unlink(filepath_in_home)
+
+        # TODO: for hardlinks, we can simply remove the in-repo file
+        # instead of removing the home-dir file and doing the rename
+        os.rename(filepath_in_repo, filepath_in_home)
+
+        # commit changes
+        _, filename = os.path.split(path)
+        self.git_repo.index.remove([filename])
+        self.git_repo.index.commit("[moredots] Remove .%s" % filename)
+
+        return True
+
     def sync(self, url=None):
         """Synchronizes dotfiles repository with a remote one.
 

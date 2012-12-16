@@ -9,7 +9,6 @@ import os
 import git
 
 from moredots.cmdline import create_argument_parser
-from moredots.files import move_dotfile_to_repo, remove_dotfile_from_repo
 from moredots.repo import DotfileRepo
 
 
@@ -48,11 +47,7 @@ def handle_add(repo, filepath, hardlink):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    move_dotfile_to_repo(filepath, repo, hardlink)
-
-    # commit changes
-    repo.index.add([filename])
-    repo.index.commit("[moredots] Add .%s" % filename)
+    DotfileRepo(repo).add(filepath, hardlink)
 
 
 def handle_rm(repo, filepath):
@@ -67,13 +62,11 @@ def handle_rm(repo, filepath):
         # TODO: this is brittle, use os.path functions instead
         filepath = filepath.replace(filename, '.%s' % filename)
 
-    remove_dotfile_from_repo(filepath, repo)
-
-    repo.index.remove([filename])
-    repo.index.commit("[moredots] Remove .%s" % filename)
+    DotfileRepo(repo).remove(filepath)
 
 
 def handle_sync(repo, remote_url):
+    """Synchronize dotfile repository with a remote one."""
     DotfileRepo(repo).sync(remote_url)
 
 
