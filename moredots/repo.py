@@ -31,6 +31,11 @@ class DotfileRepo(object):
             repo = git.Repo(repo, odbt=git.GitCmdObjectDB)
         self.git_repo = repo
 
+    def __repr__(self):
+        """Textual representation of repo object."""
+        return "<%s at %s linked from %s>" % (self.__class__.__name__,
+                                              self.dir, self.home_dir)
+
     @classmethod
     def init(cls, repo_dir=DEFAULT_REPO_DIR, home_dir=DEFAULT_HOME_DIR):
         """Initializes the dotfiles repository inside given directory.
@@ -71,12 +76,11 @@ class DotfileRepo(object):
         :return: Whether operation succeeded (boolean value)
         """
         filepath_in_home = os.path.abspath(path)
-        relative_filepath = os.path.relpath(filepath_in_home,
-                                            start=self.home_dir)
+        relative_filepath = os.path.relpath(filepath_in_home, start=self.home_dir)
 
         # check for the file's existence
-        filepath_in_repo = os.path.normpath(
-            os.path.join(self.dir, relative_filepath))
+        filepath_in_repo = os.path.normpath(os.path.join(
+            self.dir, remove_dot(relative_filepath)))
         if os.path.exists(filepath_in_repo):
             return False
 
@@ -85,7 +89,7 @@ class DotfileRepo(object):
         os.rename(filepath_in_home, filepath_in_repo)
         link_func(filepath_in_repo, filepath_in_home)  # order like shell `ln`
 
-        self._commit(add=relative_filepath)
+        self._commit("add %s" % relative_filepath, add=filepath_in_repo)
         return True
 
     def remove(self, path):
@@ -96,7 +100,7 @@ class DotfileRepo(object):
 
         :return: Whether operation succeeded (boolean value)
         """
-        filepath_in_repo = os.path.abspath(path)
+        filepath_in_repo = os.path.abspath(remove_dot(path))
         relative_filepath = os.path.relpath(filepath_in_repo, start=self.dir)
 
         # check for the links existence and remove it
@@ -110,7 +114,7 @@ class DotfileRepo(object):
         # instead of removing the home-dir file and doing the rename
         os.rename(filepath_in_repo, filepath_in_home)
 
-        self._commit(remove=relative_filepath)
+        self._commit("remove %s" % relative_filepath, remove=filepath_in_repo)
         return True
 
     def sync(self, url=None):
@@ -167,6 +171,10 @@ class DotfileRepo(object):
             return home_dir
 
         def set(self, value):
+            if value == self.dir:
+                raise ValueError(
+                    "home directory cannot be equal to repo directory")
+
             home_file = os.path.join(self.git_repo.git_dir, HOME_FILE)
             with open(home_file, 'w') as f:
                 print >>f, value
@@ -224,4 +232,24 @@ class DotfileRepo(object):
             "add %s" % ", ".join(add) if add else "",
             "remove %s" % ", ".join(remove) if remove else "",
         )))
-        self.git_repo.commit("[moredots] %s" % message.capitalize())
+        self.git_repo.index.commit("[moredots] %s" % message.capitalize())
+
+
+# Utility functions
+
+def remove_dot(path):
+    """Removes the leading dot from the childmost path fragment.
+    :return: Modified path
+    """
+    rest = ""
+
+    while True:
+        path, curr = os.path.split(path)
+        if not (path or curr):
+            return path
+
+        if len(curr) > 1 and curr.startswith('.') and curr != '..':
+            result = os.path.join(path, curr[1:], rest)
+            return result.rstrip(os.path.sep)
+
+        rest = os.path.join(curr, rest)

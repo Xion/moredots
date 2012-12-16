@@ -26,18 +26,26 @@ def test_persisting_home_dir(repo_dir, home_dir):
     assert repo1.home_dir == repo2.home_dir
 
 
+def test_add_one_file(empty_repo, dotfile):
+    repo = empty_repo
+    repo.add(dotfile)
+
+    _, name = os.path.split(dotfile)
+    assert os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
 # Fixtures / resources
 
 @pytest.fixture
 def repo_dir(tmpdir):
     """Directory to place the dotfile repo in."""
-    return str(tmpdir)
+    return str(tmpdir.mkdir('repo'))
 
 
 @pytest.fixture
 def home_dir(tmpdir):
     """Directory to act as $HOME for the dotfile repo."""
-    return str(tmpdir)
+    return str(tmpdir.mkdir('home'))
 
 
 @pytest.fixture
@@ -47,18 +55,26 @@ def empty_repo(repo_dir, home_dir):
 
 
 @pytest.fixture
-def filled_repo(repo_dir, home_dir, dotfile_name):
+def filled_repo(repo_dir, home_dir):
     """Moredots repository with at least one dotfile."""
     repo = DotfileRepo.init(repo_dir, home_dir)
 
     # add some dotfiles
     for _ in xrange(random.randint(1, 5)):
-        dotfile = os.path.join(home_dir, dotfile_name())
-        with open(dotfile, 'w') as f:
-            print >>f, random_string()
-        repo.add(dotfile)
+        repo.add(dotfile(home_dir, dotfile_name()))
 
     return repo
+
+
+@pytest.fixture
+def dotfile(home_dir, dotfile_name):
+    """A dotfile inside home directory.
+    :return: Name of a dotfile
+    """
+    path = os.path.join(home_dir, dotfile_name)
+    with open(path, 'w') as f:
+        print >>f, random_string()
+    return path
 
 
 @pytest.fixture

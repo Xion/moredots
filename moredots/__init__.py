@@ -38,15 +38,6 @@ def handle_init(repo_dir, home_dir):
 
 def handle_add(repo, filepath, hardlink):
     """Adds a dotfile to dotfiles repository."""
-
-    # TODO: add support for files inside dotdirectories, e.g. ~/.config
-    _, filename = os.path.split(filepath)
-    if filename.startswith('.'):
-        filename = filename[1:]
-    else:
-        # TODO: this is brittle, use os.path functions instead
-        filepath = filepath.replace(filename, '.%s' % filename)
-
     repo.add(filepath, hardlink)
 
 
@@ -54,14 +45,6 @@ def handle_rm(repo, filepath):
     """Remove dotfile from dotfiles repository and return it
     to home directory intact.
     """
-     # TODO: add support for files inside dotdirectories, e.g. ~/.config
-    _, filename = os.path.split(filepath)
-    if filename.startswith('.'):
-        filename = filename[1:]
-    else:
-        # TODO: this is brittle, use os.path functions instead
-        filepath = filepath.replace(filename, '.%s' % filename)
-
     repo.remove(filepath)
 
 
