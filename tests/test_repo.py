@@ -26,12 +26,29 @@ def test_persisting_home_dir(repo_dir, home_dir):
     assert repo1.home_dir == repo2.home_dir
 
 
-def test_add_one_file(empty_repo, dotfile):
+def test_add_file_to_empty(empty_repo, dotfile):
     repo = empty_repo
     repo.add(dotfile)
 
     _, name = os.path.split(dotfile)
     assert os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+def test_add_file_to_nonempty(filled_repo, dotfile):
+    repo = filled_repo
+    repo.add(dotfile)
+
+    _, name = os.path.split(dotfile)
+    assert os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+def test_add_and_remove_file(empty_repo, dotfile):
+    repo = empty_repo
+    repo.add(dotfile)
+    repo.remove(dotfile)
+
+    _, name = os.path.split(dotfile)
+    assert not os.path.exists(os.path.join(repo.dir, name[1:]))
 
 
 # Fixtures / resources

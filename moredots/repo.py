@@ -75,21 +75,19 @@ class DotfileRepo(object):
 
         :return: Whether operation succeeded (boolean value)
         """
-        filepath_in_home = os.path.abspath(path)
-        relative_filepath = os.path.relpath(filepath_in_home, start=self.home_dir)
-
-        # check for the file's existence
-        filepath_in_repo = os.path.normpath(os.path.join(
-            self.dir, remove_dot(relative_filepath)))
-        if os.path.exists(filepath_in_repo):
+        path_in_home, path_in_repo = self._filepath_pair(path)
+        if os.path.exists(path_in_repo):
             return False
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink
-        os.rename(filepath_in_home, filepath_in_repo)
-        link_func(filepath_in_repo, filepath_in_home)  # order like shell `ln`
+        os.rename(path_in_home, path_in_repo)
+        link_func(path_in_repo, path_in_home)  # order like shell `ln`
 
-        self._commit("add %s" % relative_filepath, add=filepath_in_repo)
+        # TODO: save the file information in registry
+
+        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
+        self._commit("add %s" % relative_filepath, add=path_in_repo)
         return True
 
     def remove(self, path):
@@ -100,21 +98,17 @@ class DotfileRepo(object):
 
         :return: Whether operation succeeded (boolean value)
         """
-        filepath_in_repo = os.path.abspath(remove_dot(path))
-        relative_filepath = os.path.relpath(filepath_in_repo, start=self.dir)
-
-        # check for the links existence and remove it
-        # TODO: also check if it's symlink when symlink is expected
-        filepath_in_home = os.path.normpath(
-            os.path.join(self.home_dir, relative_filepath))
-        if os.path.exists(filepath_in_home):
-            os.unlink(filepath_in_home)
+        path_in_home, path_in_repo = self._filepath_pair(path)
+        if os.path.exists(path_in_home):
+            os.unlink(path_in_home)  # TODO: also check if it's symlink
+                                     # when symlink is expected
 
         # TODO: for hardlinks, we can simply remove the in-repo file
         # instead of removing the home-dir file and doing the rename
-        os.rename(filepath_in_repo, filepath_in_home)
+        os.rename(path_in_repo, path_in_home)
 
-        self._commit("remove %s" % relative_filepath, remove=filepath_in_repo)
+        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
+        self._commit("remove %s" % relative_filepath, remove=path_in_repo)
         return True
 
     def sync(self, url=None):
@@ -185,26 +179,45 @@ class DotfileRepo(object):
 
     # Internal methods
 
-    def _install_dotfiles(self):
-        """Install all tracked dotfiles from the repo, (sym)linking
-        to them from home directory.
+    def _filepath_pair(self, filepath):
+        """Given a path to a dotfile, returns a pair of paths to this dotfile
+        both inside repo's $HOME directory and the repo itself.
+
+        :param filepath: Either of the two (absolute) paths or equivalent
+                         relative path
+
+        :return: Pair of absolute paths: (dotfile_in_home, dotfile_in_repo)
+
+        .. note;: Existence of either of files involved is not checked.
         """
-        for directory, subdirs, filenames in os.walk(self.dir):
-            for skipdir in ('.git',):
-                if skipdir in subdirs:
-                    subdirs.remove(skipdir)
+        if not filepath:
+            raise ValueError("empty dotfile path")
 
-            for filename in filenames:
-                if filename.startswith('.'):  # these are repo's internal dotfiles,
-                    continue                  # such as .gitignore
+        # case 1: relative path
+        if not os.path.isabs(filepath):
+            in_home = os.path.join(self.home_dir, filepath)
+            in_repo = os.path.join(self.dir, remove_dot(filepath))
+            return in_home, in_repo
 
-                # TODO: add support for files inside dot-directories
-                repo_path = os.path.join(directory, filename)
-                home_path = os.path.join(self.home_dir, '.' + filename)
+        # case 2: absolute path inside $HOME
+        inside_home = os.path.commonprefix([
+            filepath, self.home_dir]) == self.home_dir
+        if inside_home:
+            relative_path = os.path.relpath(filepath, start=self.home_dir)
+            in_home = filepath
+            in_repo = os.path.join(self.dir, remove_dot(relative_path))
+            return in_home, in_repo
 
-                if os.path.exists(home_path):
-                    os.unlink(home_path)
-                os.symlink(repo_path, home_path)  # TODO: support hardlinks
+        # case 3: absolute path inside repo's directory
+        inside_repo = os.path.commonprefix([filepath, self.dir]) == self.dir
+        if inside_repo:
+            relative_path = restore_dot(os.path.relpath(filepath,
+                                                        start=self.dir))
+            in_home = os.path.join(self.home_dir, relative_path)
+            in_repo = filepath
+            return in_home, in_repo
+
+        raise ValueError("invalid dotfile path")
 
     def _commit(self, message=None, add=None, remove=None):
         """Commits files to the dotfile Git repository.
@@ -234,6 +247,27 @@ class DotfileRepo(object):
         )))
         self.git_repo.index.commit("[moredots] %s" % message.capitalize())
 
+    def _install_dotfiles(self):
+        """Install all tracked dotfiles from the repo, (sym)linking
+        to them from home directory.
+        """
+        for directory, subdirs, filenames in os.walk(self.dir):
+            for skipdir in ('.git',):
+                if skipdir in subdirs:
+                    subdirs.remove(skipdir)
+
+            for filename in filenames:
+                if filename.startswith('.'):  # these are repo's internal dotfiles,
+                    continue                  # such as .gitignore
+
+                # TODO: add support for files inside dot-directories
+                repo_path = os.path.join(directory, filename)
+                home_path = os.path.join(self.home_dir, '.' + filename)
+
+                if os.path.exists(home_path):
+                    os.unlink(home_path)
+                os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
 
 # Utility functions
 
@@ -253,3 +287,23 @@ def remove_dot(path):
             return result.rstrip(os.path.sep)
 
         rest = os.path.join(curr, rest)
+
+
+def restore_dot(path):
+    """Adds the leading to the beginning of a relative path,
+    if it isn't present there already.
+    :return: Modified path
+    """
+    if os.path.isabs(path):
+        raise ValueError("relative path expected")
+
+    # put dot at beginning of first actual path segment that lacks it
+    parts = path.split(os.path.sep)
+    for i, part in enumerate(parts):
+        if part in ('.', '..'):
+            continue
+        if not part.startswith('.'):
+            parts[i] = "." + part
+            break
+
+    return os.path.sep.join(parts)
