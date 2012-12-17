@@ -20,10 +20,15 @@ def test_init_basics(repo_dir, home_dir):
     assert repo.home_dir == home_dir
 
 
-def test_persisting_home_dir(repo_dir, home_dir):
+def test_init_persists_home_dir(repo_dir, home_dir):
     repo1 = DotfileRepo.init(repo_dir, home_dir)
     repo2 = DotfileRepo(repo_dir)  # from existing repo
     assert repo1.home_dir == repo2.home_dir
+
+
+def test_init_in_existing_repo(empty_repo):
+    with pytest.raises(IOError):
+        DotfileRepo.init(empty_repo.dir)
 
 
 def test_add_file_to_empty(empty_repo, dotfile):
@@ -40,6 +45,14 @@ def test_add_file_to_nonempty(filled_repo, dotfile):
 
     _, name = os.path.split(dotfile)
     assert os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+def test_add_existing_file(empty_repo, dotfile):
+    repo = empty_repo
+    repo.add(dotfile)
+
+    with pytest.raises(IOError):
+        repo.add(dotfile)
 
 
 def test_add_and_remove_file(empty_repo, dotfile):

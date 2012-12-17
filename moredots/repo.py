@@ -8,6 +8,9 @@ import git
 from moredots.utils import objectproperty
 
 
+__all__ = ['DotfileRepo']
+
+
 HOME_FILE = 'mdots_home'
 INDEX_FILE = 'mdots_index'
 
@@ -46,6 +49,9 @@ class DotfileRepo(object):
         First, a Git repository is created in given path. Then, the moredots
         enhancements are applied, such as saving the home directory.
         """
+        ensure_empty_dir(repo_dir)
+        ensure_existing_dir(home_dir)
+
         repo = cls(git.Repo.init(repo_dir, mkdir=True))
         repo.home_dir = home_dir
         return repo
@@ -58,8 +64,10 @@ class DotfileRepo(object):
         :param repo_dir: Directory for the repo. If it exists, it must be empty.
         :param home_dir: Driectory to be considered $HOME for the new repo.
         """
-        repo = cls(git.Repo.clone_from(url, repo_dir))
+        ensure_empty_dir(repo_dir)
+        ensure_existing_dir(home_dir)
 
+        repo = cls(git.Repo.clone_from(url, repo_dir))
         repo.home_dir = home_dir
         repo._install_dotfiles()
 
@@ -73,11 +81,11 @@ class DotfileRepo(object):
         :param hardlink: Whether the file should be hardlinked
                          instead of symlinked. ``False`` by default.
 
-        :return: Whether operation succeeded (boolean value)
+        :raise: ``IOError`` if the file already exists in the repo
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
         if os.path.exists(path_in_repo):
-            return False
+            raise IOError("file %s already exists in the repo" % path)
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink
@@ -88,15 +96,12 @@ class DotfileRepo(object):
 
         relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("add %s" % relative_filepath, add=path_in_repo)
-        return True
 
     def remove(self, path):
         """Removes dotfile from the dotfile repository.
 
         :param path: Path to the dotfile inside the repo (either absolute
                      or relative to the repo's working directory)
-
-        :return: Whether operation succeeded (boolean value)
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
         if os.path.exists(path_in_home):
@@ -109,7 +114,6 @@ class DotfileRepo(object):
 
         relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("remove %s" % relative_filepath, remove=path_in_repo)
-        return True
 
     def sync(self, url=None):
         """Synchronizes dotfiles repository with a remote one.
@@ -270,6 +274,20 @@ class DotfileRepo(object):
 
 
 # Utility functions
+
+def ensure_empty_dir(path):
+    """Checks if given directory is empty, throwing ``IOError`` if not."""
+    if os.path.isdir(path) and len(os.listdir(path)) > 0:
+        raise IOError("%s is not empty" % path)
+
+
+def ensure_existing_dir(path):
+    """Checks if given directory exists, throwing ``IOError`` if it doesn't."""
+    if not os.path.exists(path):
+        raise IOError("%s does not exist" % path)
+    if not os.path.isdir(path):
+        raise IOError("%s is not a directory" % path)
+
 
 def remove_dot(path):
     """Removes the leading dot from the childmost path fragment.
