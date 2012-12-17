@@ -14,54 +14,53 @@ from tests.utils import random_string
 
 # Tests
 
-def test_init_basics(repo_dir, home_dir):
-    repo = DotfileRepo.init(repo_dir, home_dir)
-    assert repo.dir == repo_dir
-    assert repo.home_dir == home_dir
+class TestInit(object):
+
+    def test_init_basics(self, repo_dir, home_dir):
+        repo = DotfileRepo.init(repo_dir, home_dir)
+        assert repo.dir == repo_dir
+        assert repo.home_dir == home_dir
+
+    def test_init_persists_home_dir(self, repo_dir, home_dir):
+        repo1 = DotfileRepo.init(repo_dir, home_dir)
+        repo2 = DotfileRepo(repo_dir)  # from existing repo
+        assert repo1.home_dir == repo2.home_dir
+
+    def test_init_in_existing_repo(self, empty_repo):
+        with pytest.raises(IOError):
+            DotfileRepo.init(empty_repo.dir)
 
 
-def test_init_persists_home_dir(repo_dir, home_dir):
-    repo1 = DotfileRepo.init(repo_dir, home_dir)
-    repo2 = DotfileRepo(repo_dir)  # from existing repo
-    assert repo1.home_dir == repo2.home_dir
+class TestAddRemove(object):
 
-
-def test_init_in_existing_repo(empty_repo):
-    with pytest.raises(IOError):
-        DotfileRepo.init(empty_repo.dir)
-
-
-def test_add_file_to_empty(empty_repo, dotfile):
-    repo = empty_repo
-    repo.add(dotfile)
-
-    _, name = os.path.split(dotfile)
-    assert os.path.exists(os.path.join(repo.dir, name[1:]))
-
-
-def test_add_file_to_nonempty(filled_repo, dotfile):
-    repo = filled_repo
-    repo.add(dotfile)
-
-    _, name = os.path.split(dotfile)
-    assert os.path.exists(os.path.join(repo.dir, name[1:]))
-
-
-def test_add_existing_file(empty_repo, dotfile):
-    repo = empty_repo
-    repo.add(dotfile)
-
-    with pytest.raises(IOError):
+    def test_add_file_to_empty(self, empty_repo, dotfile):
+        repo = empty_repo
         repo.add(dotfile)
 
+        _, name = os.path.split(dotfile)
+        assert os.path.exists(os.path.join(repo.dir, name[1:]))
 
-def test_add_and_remove_file(empty_repo, dotfile):
-    repo = empty_repo
-    repo.add(dotfile)
-    repo.remove(dotfile)
+    def test_add_file_to_nonempty(self, filled_repo, dotfile):
+        repo = filled_repo
+        repo.add(dotfile)
 
-    _, name = os.path.split(dotfile)
-    assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+        _, name = os.path.split(dotfile)
+        assert os.path.exists(os.path.join(repo.dir, name[1:]))
+
+    def test_add_existing_file(self, empty_repo, dotfile):
+        repo = empty_repo
+        repo.add(dotfile)
+
+        with pytest.raises(IOError):
+            repo.add(dotfile)
+
+    def test_add_and_remove_file(self, empty_repo, dotfile):
+        repo = empty_repo
+        repo.add(dotfile)
+        repo.remove(dotfile)
+
+        _, name = os.path.split(dotfile)
+        assert not os.path.exists(os.path.join(repo.dir, name[1:]))
 
 
 # Fixtures / resources
