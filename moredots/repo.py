@@ -151,6 +151,22 @@ class DotfileRepo(object):
         """Path to directory where the dotfile repository resides."""
         return self.git_repo.working_dir
 
+    @property
+    def dotfiles(self):
+        """Iterable of absolute paths to all dotfiles
+        stored within this repository.
+        """
+        for directory, subdirs, filenames in os.walk(self.dir):
+            for skipdir in ('.git',):
+                if skipdir in subdirs:
+                    subdirs.remove(skipdir)
+
+            for filename in filenames:
+                if filename.startswith('.'):  # these are repo's own dotfiles,
+                    continue                  # such as .gitignore
+
+                yield os.path.join(directory, filename)
+
     @objectproperty
     def home_dir():
         """Path to directory which is considered "home" (or $HOME)
@@ -204,17 +220,14 @@ class DotfileRepo(object):
             return in_home, in_repo
 
         # case 2: absolute path inside $HOME
-        inside_home = os.path.commonprefix([
-            filepath, self.home_dir]) == self.home_dir
-        if inside_home:
+        if os.path.commonprefix([filepath, self.home_dir]) == self.home_dir:
             relative_path = os.path.relpath(filepath, start=self.home_dir)
             in_home = filepath
             in_repo = os.path.join(self.dir, remove_dot(relative_path))
             return in_home, in_repo
 
         # case 3: absolute path inside repo's directory
-        inside_repo = os.path.commonprefix([filepath, self.dir]) == self.dir
-        if inside_repo:
+        if os.path.commonprefix([filepath, self.dir]) == self.dir:
             relative_path = restore_dot(os.path.relpath(filepath,
                                                         start=self.dir))
             in_home = os.path.join(self.home_dir, relative_path)
@@ -255,22 +268,12 @@ class DotfileRepo(object):
         """Install all tracked dotfiles from the repo, (sym)linking
         to them from home directory.
         """
-        for directory, subdirs, filenames in os.walk(self.dir):
-            for skipdir in ('.git',):
-                if skipdir in subdirs:
-                    subdirs.remove(skipdir)
+        for filepath in self.dotfiles:
+            home_path, repo_path = self._filepath_pair(filepath)
 
-            for filename in filenames:
-                if filename.startswith('.'):  # these are repo's internal dotfiles,
-                    continue                  # such as .gitignore
-
-                # TODO: add support for files inside dot-directories
-                repo_path = os.path.join(directory, filename)
-                home_path = os.path.join(self.home_dir, '.' + filename)
-
-                if os.path.exists(home_path):
-                    os.unlink(home_path)
-                os.symlink(repo_path, home_path)  # TODO: support hardlinks
+            if os.path.exists(home_path):
+                os.unlink(home_path)
+            os.symlink(repo_path, home_path)  # TODO: support hardlinks
 
 
 # Utility functions

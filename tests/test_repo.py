@@ -31,7 +31,7 @@ class TestInit(object):
             DotfileRepo.init(empty_repo.dir)
 
 
-class TestAddRemove(object):
+class TestAdd(object):
 
     def test_add_file_to_empty(self, empty_repo, dotfile):
         repo = empty_repo
@@ -54,13 +54,24 @@ class TestAddRemove(object):
         with pytest.raises(IOError):
             repo.add(dotfile)
 
-    def test_add_and_remove_file(self, empty_repo, dotfile):
-        repo = empty_repo
-        repo.add(dotfile)
+
+class TestRemove(object):
+
+    def test_remove_existing_file(self, filled_repo):
+        repo = filled_repo
+
+        dotfile = next(repo.dotfiles)
         repo.remove(dotfile)
 
         _, name = os.path.split(dotfile)
         assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+
+    def test_remove_nonexistent_file(self, filled_repo):
+        repo = filled_repo
+
+        dotfile = next(repo.dotfiles) + '_does_not_exist'
+        with pytest.raises(OSError):
+            repo.remove(dotfile)
 
 
 # Fixtures / resources
