@@ -31,6 +31,26 @@ class TestInit(object):
             DotfileRepo.init(empty_repo.dir)
 
 
+class TestInstall(object):
+
+    def test_install_basics(self, empty_remote_url, repo_dir, home_dir):
+        repo = DotfileRepo.install(empty_remote_url, repo_dir, home_dir)
+        assert repo.dir == repo_dir
+        assert repo.home_dir == home_dir
+
+    def test_install_adds_git_remote(self, empty_remote_url, repo_dir, home_dir):
+        repo = DotfileRepo.install(empty_remote_url, repo_dir, home_dir)
+        assert repo.git_repo.remotes.origin.url == empty_remote_url
+
+    def test_install_empty(self, empty_remote_url, repo_dir, home_dir):
+        repo = DotfileRepo.install(empty_remote_url, repo_dir, home_dir)
+        assert len(list(repo.dotfiles)) == 0
+
+    def test_install_filled(self, filled_remote_url, repo_dir, home_dir):
+        repo = DotfileRepo.install(filled_remote_url, repo_dir, home_dir)
+        assert len(list(repo.dotfiles)) > 1
+
+
 class TestAdd(object):
 
     def test_add_file_to_empty(self, empty_repo, dotfile):
@@ -74,6 +94,15 @@ class TestRemove(object):
             repo.remove(dotfile)
 
 
+def test_add_and_remove_file(empty_repo, dotfile):
+    repo = empty_repo
+    repo.add(dotfile)
+    repo.remove(dotfile)
+
+    _, name = os.path.split(dotfile)
+    assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
 # Fixtures / resources
 
 @pytest.fixture
@@ -86,6 +115,12 @@ def repo_dir(tmpdir):
 def home_dir(tmpdir):
     """Directory to act as $HOME for the dotfile repo."""
     return str(tmpdir.mkdir('home'))
+
+
+@pytest.fixture
+def remote_dir(tmpdir):
+    """Directory for "remote" dotfiles repository."""
+    return str(tmpdir.mkdir('remote'))
 
 
 @pytest.fixture
@@ -104,6 +139,27 @@ def filled_repo(repo_dir, home_dir):
         repo.add(dotfile(home_dir, dotfile_name()))
 
     return repo
+
+
+@pytest.fixture
+def empty_remote_url(remote_dir, home_dir):
+    """Empty dotfiles repository to act as remote,
+    to install from or sync with it.
+    """
+    # home_dir doesn't matter, it can be the same as the one for "local"
+    # repo because the "remote" one is not using it at all
+    repo = empty_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
+
+
+@pytest.fixture
+def filled_remote_url(remote_dir, home_dir):
+    """Moredots repository with at least one dotfile
+    that can act as remote, to install from or sync with it.
+    """
+    # see the comment about home_dir above
+    repo = filled_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
 
 
 @pytest.fixture
