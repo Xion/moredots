@@ -93,6 +93,14 @@ class TestRemove(object):
         with pytest.raises(OSError):
             repo.remove(dotfile)
 
+    def test_remove_same_file_twice(self, filled_repo):
+        repo = filled_repo
+        dotfile = next(repo.dotfiles)
+
+        repo.remove(dotfile)
+        with pytest.raises(OSError):
+            repo.remove(dotfile)
+
 
 def test_add_and_remove_file(empty_repo, dotfile):
     repo = empty_repo
@@ -101,6 +109,10 @@ def test_add_and_remove_file(empty_repo, dotfile):
 
     _, name = os.path.split(dotfile)
     assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+class TestSync(object):
+    pass
 
 
 # Fixtures / resources
@@ -142,24 +154,38 @@ def filled_repo(repo_dir, home_dir):
 
 
 @pytest.fixture
-def empty_remote_url(remote_dir, home_dir):
+def empty_remote(remote_dir, home_dir):
     """Empty dotfiles repository to act as remote,
     to install from or sync with it.
     """
     # home_dir doesn't matter, it can be the same as the one for "local"
     # repo because the "remote" one is not using it at all
-    repo = empty_repo(remote_dir, home_dir)
-    return 'file://' + repo.dir
+    return empty_repo(remote_dir, home_dir)
 
 
 @pytest.fixture
-def filled_remote_url(remote_dir, home_dir):
+def filled_remote(remote_dir, home_dir):
     """Moredots repository with at least one dotfile
     that can act as remote, to install from or sync with it.
     """
     # see the comment about home_dir above
-    repo = filled_repo(remote_dir, home_dir)
-    return 'file://' + repo.dir
+    return filled_repo(remote_dir, home_dir)
+
+
+@pytest.fixture
+def empty_remote_url(empty_remote):
+    """URL to empty dotfiles repository to act as remote,
+    to install from or sync with it.
+    """
+    return 'file://' + empty_remote.dir
+
+
+@pytest.fixture
+def filled_remote_url(filled_remote):
+    """URL to moredots repository with at least one dotfile
+    that can act as remote, to install from or sync with it.
+    """
+    return 'file://' + filled_remote.dir
 
 
 @pytest.fixture
