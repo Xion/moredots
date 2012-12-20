@@ -38,9 +38,11 @@ class TestInstall(object):
         assert repo.dir == repo_dir
         assert repo.home_dir == home_dir
 
-    def test_install_adds_git_remote(self, empty_remote_url, repo_dir, home_dir):
-        repo = DotfileRepo.install(empty_remote_url, repo_dir, home_dir)
-        assert repo.git_repo.remotes.origin.url == empty_remote_url
+    def test_install_adds_git_remote(self, filled_remote_url, repo_dir, home_dir):
+        repo = DotfileRepo.install(filled_remote_url, repo_dir, home_dir)
+        origin = repo.git_repo.remotes.origin
+        assert origin.url == filled_remote_url
+        assert len(origin.refs) > 0
 
     def test_install_empty(self, empty_remote_url, repo_dir, home_dir):
         repo = DotfileRepo.install(empty_remote_url, repo_dir, home_dir)
@@ -48,7 +50,7 @@ class TestInstall(object):
 
     def test_install_filled(self, filled_remote_url, repo_dir, home_dir):
         repo = DotfileRepo.install(filled_remote_url, repo_dir, home_dir)
-        assert len(list(repo.dotfiles)) > 1
+        assert len(list(repo.dotfiles)) > 0
 
 
 class TestAdd(object):
@@ -112,7 +114,18 @@ def test_add_and_remove_file(empty_repo, dotfile):
 
 
 class TestSync(object):
-    pass
+
+    # Tests
+
+    def test_sync_empty_with_empty_remote(self, empty_repo, empty_remote_url):
+        # nothing to pull from or push to
+        with pytest.raises(Exception):
+            empty_repo.sync(empty_remote_url)
+
+    def test_sync_empty_with_filled_remote(self, empty_repo, filled_remote_url):
+        repo = empty_repo
+        repo.sync(filled_remote_url)
+        assert len(list(repo.dotfiles)) > 0
 
 
 # Fixtures / resources
@@ -154,38 +167,24 @@ def filled_repo(repo_dir, home_dir):
 
 
 @pytest.fixture
-def empty_remote(remote_dir, home_dir):
+def empty_remote_url(remote_dir, home_dir):
     """Empty dotfiles repository to act as remote,
     to install from or sync with it.
     """
     # home_dir doesn't matter, it can be the same as the one for "local"
     # repo because the "remote" one is not using it at all
-    return empty_repo(remote_dir, home_dir)
+    repo = empty_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
 
 
 @pytest.fixture
-def filled_remote(remote_dir, home_dir):
+def filled_remote_url(remote_dir, home_dir):
     """Moredots repository with at least one dotfile
     that can act as remote, to install from or sync with it.
     """
     # see the comment about home_dir above
-    return filled_repo(remote_dir, home_dir)
-
-
-@pytest.fixture
-def empty_remote_url(empty_remote):
-    """URL to empty dotfiles repository to act as remote,
-    to install from or sync with it.
-    """
-    return 'file://' + empty_remote.dir
-
-
-@pytest.fixture
-def filled_remote_url(filled_remote):
-    """URL to moredots repository with at least one dotfile
-    that can act as remote, to install from or sync with it.
-    """
-    return 'file://' + filled_remote.dir
+    repo = filled_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
 
 
 @pytest.fixture
