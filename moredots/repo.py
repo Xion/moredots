@@ -124,7 +124,7 @@ class DotfileRepo(object):
         """
         existing_origin = getattr(self.git_repo.remotes, 'origin', None)
         if not (existing_origin or url):
-            return False
+            raise IOError("no remote repo to sync with")
 
         if url and existing_origin:
             self.git_repo.delete_remote('origin')
