@@ -36,6 +36,13 @@ class DuplicateDotfileError(DotfileError):
     pass
 
 
+class DotfileNotFoundError(DotfileError):
+    """Error raised when tryng to remove a non-exsiting dotfile
+    from dotfile repository.
+    """
+    pass
+
+
 # Repository errors
 
 class RepositoryError(Exception):
@@ -77,6 +84,13 @@ class SynchronizationError(Exception):
 class UnspecifiedRemoteError(SynchronizationError):
     """Error raised when no remote dotfile repository has been specified
     while trying to perform synchronization.
+    """
+    pass
+
+
+class EmptyRemoteError(SynchronizationError):
+    """Error raised during synchronization attempt when
+    specified remote repository is empty.
     """
     pass
 

@@ -7,6 +7,7 @@ import random
 
 import pytest
 
+from moredots import exc
 from moredots.repo import DotfileRepo
 
 from tests.utils import random_string
@@ -27,7 +28,7 @@ class TestInit(object):
         assert repo1.home_dir == repo2.home_dir
 
     def test_init_in_existing_repo(self, empty_repo):
-        with pytest.raises(IOError):
+        with pytest.raises(exc.RepositoryExistsError):
             DotfileRepo.init(empty_repo.dir)
 
 
@@ -73,7 +74,7 @@ class TestAdd(object):
         repo = empty_repo
         repo.add(dotfile)
 
-        with pytest.raises(IOError):
+        with pytest.raises(exc.DuplicateDotfileError):
             repo.add(dotfile)
 
 
@@ -92,7 +93,7 @@ class TestRemove(object):
         repo = filled_repo
 
         dotfile = next(repo.dotfiles) + '_does_not_exist'
-        with pytest.raises(OSError):
+        with pytest.raises(exc.DotfileNotFoundError):
             repo.remove(dotfile)
 
     def test_remove_same_file_twice(self, filled_repo):
@@ -100,7 +101,7 @@ class TestRemove(object):
         dotfile = next(repo.dotfiles)
 
         repo.remove(dotfile)
-        with pytest.raises(OSError):
+        with pytest.raises(exc.DotfileNotFoundError):
             repo.remove(dotfile)
 
 
@@ -117,7 +118,7 @@ class TestSync(object):
 
     def test_sync_empty_with_nothing(self, empty_repo):
         # no remote repo to sync with
-        with pytest.raises(IOError):
+        with pytest.raises(exc.UnspecifiedRemoteError):
             empty_repo.sync()
 
     def test_sync_empty_with_empty_remote(self, empty_repo, empty_remote_url):
@@ -133,14 +134,14 @@ class TestSync(object):
     def test_sync_filled_with_empty_remote(self, filled_repo, empty_remote_url):
         repo = filled_repo
         count_before = len(list(repo.dotfiles))
-        with pytest.raises(Exception):
+        with pytest.raises(exc.EmptyRemoteError):
             empty_repo.sync(empty_remote_url)
         count_after = len(list(repo.dotfiles))
 
         assert count_before == count_after
 
     def test_sync_with_unrelated_remote(self, filled_repo, filled_remote_url):
-        with pytest.raises(Exception):
+        with pytest.raises(exc.UnrelatedRemoteError):
             filled_repo.sync(filled_remote_url)
 
 
