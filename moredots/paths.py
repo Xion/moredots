@@ -5,24 +5,6 @@ auxiliary to various other places in the project.
 import os
 
 
-# Directory assertions
-
-def ensure_empty_dir(path):
-    """Checks if given directory is empty, throwing ``IOError`` if not."""
-    if os.path.isdir(path) and len(os.listdir(path)) > 0:
-        raise IOError("%s is not empty" % path)
-
-
-def ensure_existing_dir(path):
-    """Checks if given directory exists, throwing ``IOError`` if it doesn't."""
-    if not os.path.exists(path):
-        raise IOError("%s does not exist" % path)
-    if not os.path.isdir(path):
-        raise IOError("%s is not a directory" % path)
-
-
-# Other
-
 def remove_dot(path):
     """Removes the leading dot from the childmost path fragment.
     :return: Modified path

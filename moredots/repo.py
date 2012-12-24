@@ -6,8 +6,7 @@ import os
 import git
 
 from moredots import exc
-from moredots.paths import (ensure_empty_dir, ensure_existing_dir,
-                            remove_dot, restore_dot)
+from moredots.paths import remove_dot, restore_dot
 from moredots.utils import objectproperty
 
 
@@ -51,8 +50,8 @@ class DotfileRepo(object):
         First, a Git repository is created in given path. Then, the moredots
         enhancements are applied, such as saving the home directory.
         """
-        ensure_empty_dir(repo_dir)
-        ensure_existing_dir(home_dir)
+        check_repo_dir(repo_dir)
+        check_home_dir(home_dir)
 
         repo = cls(git.Repo.init(repo_dir, mkdir=True))
         repo.home_dir = home_dir
@@ -66,8 +65,8 @@ class DotfileRepo(object):
         :param repo_dir: Directory for the repo. If it exists, it must be empty.
         :param home_dir: Driectory to be considered $HOME for the new repo.
         """
-        ensure_empty_dir(repo_dir)
-        ensure_existing_dir(home_dir)
+        check_repo_dir(repo_dir)
+        check_home_dir(home_dir)
 
         repo = cls(git.Repo.clone_from(url, repo_dir))
         repo.home_dir = home_dir
@@ -285,3 +284,26 @@ class DotfileRepo(object):
             if os.path.exists(home_path):
                 os.unlink(home_path)
             os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
+
+# Directory assertions
+
+def check_repo_dir(path):
+    """Checks if given directory is suitable for placing dotfile repository.
+
+    :param path: Directory to check
+    :raise: ``exc.RepositoryExistsError`` if ``path`` exists and is not empty
+    """
+    if os.path.isdir(path) and len(os.listdir(path)) > 0:
+        raise exc.RepositoryExistsError(path)
+
+
+def check_home_dir(path):
+    """Checks if given directory is valid $HOME dir,
+    throwing ``IOError`` if it's not.
+    """
+    # TODO: throw dedicated exception type
+    if not os.path.exists(path):
+        raise IOError("%s does not exist" % path)
+    if not os.path.isdir(path):
+        raise IOError("%s is not a directory" % path)
