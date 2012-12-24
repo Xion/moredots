@@ -5,6 +5,7 @@ import os
 
 import git
 
+from moredots import exc
 from moredots.paths import (ensure_empty_dir, ensure_existing_dir,
                             remove_dot, restore_dot)
 from moredots.utils import objectproperty
@@ -82,11 +83,11 @@ class DotfileRepo(object):
         :param hardlink: Whether the file should be hardlinked
                          instead of symlinked. ``False`` by default.
 
-        :raise: ``IOError`` if the file already exists in the repo
+        :raise: ``exc.DuplicateDotfileError`` if the file already exists
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
         if os.path.exists(path_in_repo):
-            raise IOError("file %s already exists in the repo" % path)
+            raise exc.DuplicateDotfileError(path, repo=self)
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink
@@ -103,8 +104,13 @@ class DotfileRepo(object):
 
         :param path: Path to the dotfile inside the repo (either absolute
                      or relative to the repo's working directory)
+
+        :raise: ``exc.DotfileNotFoundError`` if dotfile is not in the repo
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
+        if not os.path.exists(path_in_repo):
+            raise exc.DotfileNotFoundError(path, repo=self)
+
         if os.path.exists(path_in_home):
             os.unlink(path_in_home)  # TODO: also check if it's symlink
                                      # when symlink is expected
@@ -125,7 +131,7 @@ class DotfileRepo(object):
         """
         existing_origin = getattr(self.git_repo.remotes, 'origin', None)
         if not (existing_origin or url):
-            raise IOError("no remote repo to sync with")
+            raise exc.NoRemoteError(repo=self)
 
         if url and existing_origin:
             self.git_repo.delete_remote('origin')
@@ -143,6 +149,10 @@ class DotfileRepo(object):
         origin.push(master)
 
         # setting up remote branch tracking for subsequent `mdots sync`
+        origin_refs = list(git.refs.remote.RemoteReference.iter_items(
+            self.git_repo, remote=origin))
+        if not origin_refs:
+            raise exc.InvalidRemoteError(repo=self, remote=origin)
         self.git_repo.head.ref.set_tracking_branch(origin.refs.master)
 
         self._install_dotfiles()

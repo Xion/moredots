@@ -69,7 +69,7 @@ class SynchronizationError(Exception):
     """Base class for exceptions that may occur during the synchronization
     of dotfile repositories with their remotes.
     """
-    def __init__(self, repo, remote, *args, **kwargs):
+    def __init__(self, repo, remote=None, *args, **kwargs):
         """Constructor."""
         super(SynchronizationError, self).__init__(*args, **kwargs)
 
@@ -81,22 +81,15 @@ class SynchronizationError(Exception):
                                            self.repo, self.remote)
 
 
-class UnspecifiedRemoteError(SynchronizationError):
+class NoRemoteError(SynchronizationError):
     """Error raised when no remote dotfile repository has been specified
     while trying to perform synchronization.
     """
     pass
 
 
-class EmptyRemoteError(SynchronizationError):
+class InvalidRemoteError(SynchronizationError):
     """Error raised during synchronization attempt when
-    specified remote repository is empty.
-    """
-    pass
-
-
-class UnrelatedRemoteError(SynchronizationError):
-    """Error raised when attempting to synchronize with unrelated
-    remote dotile repository.
+    specified remote repository is empty or unrelated with local repository.
     """
     pass
