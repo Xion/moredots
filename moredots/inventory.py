@@ -89,6 +89,14 @@ class InventoryEntry(object):
         return "<%s %s %s>" % (self.__class__.__name__, self.path,
                                self.dumps(sep=" ", include_path=False))
 
+    def dump(self, f, sep=os.pathsep, include_path=True):
+        """Dump the entry into its textual representation,
+        writing it to specified file-like object.
+
+        For description of other parameters, see :meth:`dumps`.
+        """
+        print >>f, self.dumps(sep=sep, include_path=include_path)
+
     def dumps(self, sep=os.pathsep, include_path=True):
         """Dump the entry into its textual representation.
 
@@ -103,6 +111,14 @@ class InventoryEntry(object):
         if include_path:
             result = self.path + sep + result
         return result
+
+    def load(self, f, sep=os.pathsep):
+        """Load the entry data for textual representation,
+        read from specified file-like object.
+
+        For description of other parameters, see :meth:`loads`.
+        """
+        return self.loads(f.readline(), sep=sep)
 
     def loads(self, text, sep=os.pathsep):
         """Load the entry data from textual representation thereof.
