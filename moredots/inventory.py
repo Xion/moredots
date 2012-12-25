@@ -23,7 +23,7 @@ class Inventory(object):
     """
     def __init__(self, repo):
         """Constructor.
-        :param: :class:`DotfileRepo` object
+        :param repo: :class:`DotfileRepo` object
         """
         self.repo = repo
 
@@ -55,7 +55,7 @@ class InventoryEntry(object):
 
         """
         argcount = len(args) + len(kwargs)
-        if argcount > len(self.__slots__):
+        if argcount == 0 or argcount > len(self.__slots__):
             raise TypeError("__init__() takes exactly %s arguments (%s given)"
                             % (len(self.__slots__), argcount))
 
