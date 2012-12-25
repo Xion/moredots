@@ -42,16 +42,36 @@ class InventoryEntry(object):
     def __init__(self, *args, **kwargs):
         """Constructor.
 
-        Entry is initializaed based on both positional and keyword arguments.
-        Dotfile repo (relative to repo root) is expected as first argument.
+        Entry is initializaed either from keyword arguments only,
+        or dotfile path along with keyword arguments,
+        or a single positional argument which contains the entry's
+        textual representation.
+
+        Examples::
+
+            entry = InventoryEntry(path='.foo', hardlink=False)
+            entry = InventoryEntry('.foo', hardlink=False)
+            entry = InventoryEntry('.foo:hardlink=False')
+
         """
+        argcount = len(args) + len(kwargs)
+        if argcount > len(self.__slots__):
+            raise TypeError("__init__() takes exactly %s arguments (%s given)"
+                            % (len(self.__slots__), argcount))
+
+        # parse textual representation if provided
+        if len(args) == 1 and not kwargs:
+            self.loads(args[0])
+            return
+
+        # put positional args into kwargs dictionary
         for name, value in zip(self.__slots__, args):
             if name in kwargs:
                 raise TypeError("__init__() got multiple values "
                                 "for keyword argument '%s'" % name)
             kwargs[name] = value
 
-        # initialize the record
+        # initialize the record based on kwargs
         for name, value in kwargs.iteritems():
             if name not in self.__slots__:
                 raise TypeError("__init__() got an unexpected keyword argument "
@@ -69,7 +89,7 @@ class InventoryEntry(object):
         return "<%s %s %s>" % (self.__class__.__name__, self.path,
                                self.dumps(sep=" ", include_path=False))
 
-    def dumps(self, sep=':', include_path=True):
+    def dumps(self, sep=os.pathsep, include_path=True):
         """Dump the entry into its textual representation.
 
         :param sep: Separator inserted between the values
@@ -83,3 +103,29 @@ class InventoryEntry(object):
         if include_path:
             result = self.path + sep + result
         return result
+
+    def loads(self, text, sep=os.pathsep):
+        """Load the entry data from textual representation thereof.
+
+        :param sep: Separator inserted between the values
+
+        :raise: ``ValueError`` if parsing error occurs
+        """
+        text = str(text).strip()
+        if not text:
+            raise ValueError("no data provided decode inventory entry")
+
+        parts = text.split(sep)
+        if not parts:
+            raise ValueError("data lacks proper structure of inventory entry")
+
+        data = {'path': parts[0]}
+        for part in parts:
+            name, value = part.split('=')  # unpack errors slipping is fine here
+            if name in data:
+                raise ValueError("duplicate value for '%s' key" % name)
+            data[name] = value
+
+        # parsing successful, copy values to self
+        for name, value in data.iteritems():
+            setattr(self, name, value)
