@@ -48,12 +48,12 @@ class DotfileNotFoundError(DotfileError):
 class RepositoryError(Exception):
     """Base class for exceptions related to dotfiles repositories as a whole."""
 
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, repo_dir, *args, **kwargs):
         super(RepositoryError, self).__init__(*args, **kwargs)
-        self.path = path
+        self.repo_dir = repo_dir
 
     def __repr__(self):
-        return "<%s path=%s>" % (self.__class__.__name__, self.path)
+        return "<%s dir=%s>" % (self.__class__.__name__, self.repo_dir)
 
 
 class RepositoryExistsError(RepositoryError):
@@ -61,6 +61,22 @@ class RepositoryExistsError(RepositoryError):
     inside directory where such repo already exists.
     """
     pass
+
+
+class InvalidHomeDirError(RepositoryError):
+    """Error raised when the directory specified as $HOME
+    for the dotfile repository is invalid and cannot be used as such.
+
+    This happens e.g. when the directory doesn't exist,
+    or is the same as the dotfile repo directory.
+    """
+    def __init__(self, repo_dir, home_dir, *args, **kwargs):
+        super(InvalidHomeDirError, self).__init__(repo_dir, *args, **kwargs)
+        self.home_dir = home_dir
+
+    def __repr__(self):
+        return "<%s dir=%s home=%s>" % (self.__class__.__name__,
+                                        self.repo_dir, self.home_dir)
 
 
 # Synchronization errors

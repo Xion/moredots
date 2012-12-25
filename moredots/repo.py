@@ -50,8 +50,7 @@ class DotfileRepo(object):
         First, a Git repository is created in given path. Then, the moredots
         enhancements are applied, such as saving the home directory.
         """
-        check_repo_dir(repo_dir)
-        check_home_dir(home_dir)
+        cls._check_dirs(repo_dir, home_dir)
 
         repo = cls(git.Repo.init(repo_dir, mkdir=True))
         repo.home_dir = home_dir
@@ -65,8 +64,7 @@ class DotfileRepo(object):
         :param repo_dir: Directory for the repo. If it exists, it must be empty.
         :param home_dir: Driectory to be considered $HOME for the new repo.
         """
-        check_repo_dir(repo_dir)
-        check_home_dir(home_dir)
+        cls._check_dirs(repo_dir, home_dir)
 
         repo = cls(git.Repo.clone_from(url, repo_dir))
         repo.home_dir = home_dir
@@ -215,6 +213,31 @@ class DotfileRepo(object):
 
     # Internal methods
 
+    @classmethod
+    def _check_dirs(cls, repo_dir, home_dir):
+        """Check given directories - for repository and the $HOME dir to be
+        linked with it - to see if they are fullfil necessary requirements.
+
+        :raise: Various exceptions if directories do not conform
+        """
+        if os.path.isdir(repo_dir) and len(os.listdir(repo_dir)) > 0:
+            raise exc.RepositoryExistsError(repo_dir)
+
+        home_dir_exists = os.path.exists(home_dir) and os.path.isdir(home_dir)
+        if not home_dir_exists or home_dir == repo_dir:
+            raise exc.InvalidHomeDirError(repo_dir, home_dir)
+
+    def _install_dotfiles(self):
+        """Install all tracked dotfiles from the repo, (sym)linking
+        to them from home directory.
+        """
+        for filepath in self.dotfiles:
+            home_path, repo_path = self._filepath_pair(filepath)
+
+            if os.path.exists(home_path):
+                os.unlink(home_path)
+            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
     def _filepath_pair(self, filepath):
         """Given a path to a dotfile, returns a pair of paths to this dotfile
         both inside repo's $HOME directory and the repo itself.
@@ -279,37 +302,3 @@ class DotfileRepo(object):
             "remove %s" % ", ".join(remove) if remove else "",
         )))
         self.git_repo.index.commit("[moredots] %s" % message.capitalize())
-
-    def _install_dotfiles(self):
-        """Install all tracked dotfiles from the repo, (sym)linking
-        to them from home directory.
-        """
-        for filepath in self.dotfiles:
-            home_path, repo_path = self._filepath_pair(filepath)
-
-            if os.path.exists(home_path):
-                os.unlink(home_path)
-            os.symlink(repo_path, home_path)  # TODO: support hardlinks
-
-
-# Directory assertions
-
-def check_repo_dir(path):
-    """Checks if given directory is suitable for placing dotfile repository.
-
-    :param path: Directory to check
-    :raise: ``exc.RepositoryExistsError`` if ``path`` exists and is not empty
-    """
-    if os.path.isdir(path) and len(os.listdir(path)) > 0:
-        raise exc.RepositoryExistsError(path)
-
-
-def check_home_dir(path):
-    """Checks if given directory is valid $HOME dir,
-    throwing ``IOError`` if it's not.
-    """
-    # TODO: throw dedicated exception type
-    if not os.path.exists(path):
-        raise IOError("%s does not exist" % path)
-    if not os.path.isdir(path):
-        raise IOError("%s is not a directory" % path)
