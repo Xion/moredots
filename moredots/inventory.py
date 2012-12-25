@@ -26,6 +26,21 @@ class Inventory(object):
         :param repo: :class:`DotfileRepo` object
         """
         self.repo = repo
+        self.load()
+
+    def load(self):
+        """Loads inventory records from ``self.file``."""
+        entries = {}
+        with open(self.file) as f:
+            for entry in map(InventoryEntry, f.readlines()):
+                entries[entry.path] = entry
+        self.entries = entries
+
+    def save(self):
+        """Saves inventory records to ``self.file``."""
+        with open(self.file, 'w') as f:
+            for entry in self.entries.itervalues():
+                entry.dumps(f)
 
     @property
     def file(self):
