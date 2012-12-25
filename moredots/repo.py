@@ -143,15 +143,21 @@ class DotfileRepo(object):
         master = self.git_repo.head.ref.name
         try:
             origin.pull(master)  # TODO: merging?...
+            was_empty = False
         except git.GitCommandError:
-            pass  # remote doesn't have anything yet - no biggie
+            was_empty = True  # remote has nothing yet, so we just push
         origin.push(master)
 
-        # setting up remote branch tracking for subsequent `mdots sync`
+        if was_empty:
+            return
+
+        # check if we actually pulled something for the specified remote
         origin_refs = list(git.refs.remote.RemoteReference.iter_items(
             self.git_repo, remote=origin))
         if not origin_refs:
-            raise exc.InvalidRemoteError(repo=self, remote=origin)
+            raise exc.UnrelatedRemoteError(repo=self, remote=origin)
+
+        # set up remote branch tracking for subsequent `mdots sync`
         self.git_repo.head.ref.set_tracking_branch(origin.refs.master)
 
         self._install_dotfiles()

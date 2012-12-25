@@ -88,8 +88,8 @@ class NoRemoteError(SynchronizationError):
     pass
 
 
-class InvalidRemoteError(SynchronizationError):
+class UnrelatedRemoteError(SynchronizationError):
     """Error raised during synchronization attempt when
-    specified remote repository is empty or unrelated with local repository.
+    specified remote repository is unrelated to local repository.
     """
     pass
