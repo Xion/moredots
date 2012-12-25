@@ -6,8 +6,7 @@ import os
 import git
 
 from moredots import exc
-from moredots.paths import remove_dot, restore_dot
-from moredots.utils import objectproperty
+from moredots.utils import objectproperty, remove_dot, restore_dot
 
 
 __all__ = ['DotfileRepo']
