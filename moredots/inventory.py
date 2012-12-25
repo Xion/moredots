@@ -42,7 +42,7 @@ class InventoryEntry(object):
     def __init__(self, *args, **kwargs):
         """Constructor.
 
-        Entry is initializaed either from keyword arguments only,
+        Entry is initialized either from keyword arguments only,
         or dotfile path along with keyword arguments,
         or a single positional argument which contains the entry's
         textual representation.
@@ -136,7 +136,7 @@ class InventoryEntry(object):
             raise ValueError("data lacks proper structure of inventory entry")
 
         data = {'path': parts[0]}
-        for part in parts:
+        for part in parts[1:]:
             name, value = part.split('=')  # unpack errors slipping is fine here
             if name in data:
                 raise ValueError("duplicate value for '%s' key" % name)
