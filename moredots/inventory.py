@@ -27,7 +27,10 @@ class Inventory(object):
         :param repo: :class:`DotfileRepo` object
         """
         self.repo = repo
-        self.load()
+
+        self._entries = {}
+        if os.path.exists(self.file):
+            self.load()
 
     def load(self):
         """Loads inventory records from ``self.file``."""
@@ -41,8 +44,10 @@ class Inventory(object):
     def save(self):
         """Saves inventory records to ``self.file``."""
         with open(self.file, 'w') as f:
-            for entry in self.entries.itervalues():
-                entry.dumps(f)
+            for entry in self:
+                entry.dump(f)
+
+            self.repo.git_repo.index.add([INVENTORY_FILE])
             self._dirty = False
 
     def add(self, path, **kwargs):
