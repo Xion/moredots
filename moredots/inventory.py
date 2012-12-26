@@ -34,7 +34,7 @@ class Inventory(object):
         with open(self.file) as f:
             for entry in map(InventoryEntry, f.readlines()):
                 entries[entry.path] = entry
-        self.entries = entries
+        self._entries = entries
 
     def save(self):
         """Saves inventory records to ``self.file``."""
@@ -46,6 +46,27 @@ class Inventory(object):
     def file(self):
         """Full path to the inventory data file."""
         return os.path.join(self.repo.dir, INVENTORY_FILE)
+
+    def __nonzero__(self):
+        """Casting to bool yields True if inventory contains entries."""
+        return bool(self._entries)
+    __bool__ = __nonzero__  # for Python 3.x
+
+    def __len__(self):
+        """Length of :class:`Inventory` equals number of entries."""
+        return len(self._entries)
+
+    def __iter__(self):
+        """Iterating through :class:`Inventory` object will yield
+        all the :class:`InventoryEntry` objects contained within.
+        """
+        return self._entries.itervalues()
+
+    def __getitem__(self, path):
+        """Indexing retrieves :class:`InventoryEntry` object corresponding to
+        dotfile of given path.
+        """
+        return self._entries[path]
 
 
 class InventoryEntry(object):
