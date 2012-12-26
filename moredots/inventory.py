@@ -3,6 +3,7 @@ Module containing the :class:`Inventory` class which contains
 meta-information about dotfiles stored within dotfile repository.
 """
 import os
+from itertools import imap
 
 
 __all__ = ['Inventory']
@@ -30,17 +31,65 @@ class Inventory(object):
 
     def load(self):
         """Loads inventory records from ``self.file``."""
-        entries = {}
         with open(self.file) as f:
-            for entry in map(InventoryEntry, f.readlines()):
-                entries[entry.path] = entry
-        self._entries = entries
+            self._entries = dict(
+                (entry.path, entry)
+                for entry in imap(InventoryEntry, f.readlines())
+            )
 
     def save(self):
         """Saves inventory records to ``self.file``."""
         with open(self.file, 'w') as f:
             for entry in self.entries.itervalues():
                 entry.dumps(f)
+
+    def add(self, path, **kwargs):
+        """Adds a dotfile to this inventory.
+
+        :param path: Path to the dotfile, relative to repository root directory
+
+        Additional keyword arguments are stored within the inventory entry
+        for the file.
+        """
+        if not path:
+            raise ValueError("no dotfile path specified")
+        if path in self._entries:
+            raise ValueError(
+                "dotfile %s already exists in the inventory" % path)
+
+        self._entries[path] = InventoryEntry(path, **kwargs)
+
+    def update(self, path, **kwargs):
+        """Updates entry data for given dotfile.
+
+        :param path: Path to the dotfile, relative to repository root directory
+
+        Keyword arguments specify which entry data should be updated
+        and new values for the keys.
+        """
+        if not path:
+            raise ValueError("no dotfile path specified")
+        if path not in self._entries:
+            raise ValueError(
+                "dotfile %s does not exist in the inventory" % path)
+        if not kwargs:
+            raise TypeError("update() requires at least one keyword argument")
+
+        entry = self._entries[path]
+        for name, value in kwargs.iteritems():
+            setattr(entry, name, value)
+
+    def remove(self, path):
+        """Removes dotfile from this inventory.
+        :param path: Path to the dotfile, relative to repository root directory
+        """
+        if not path:
+            raise ValueError("no dotfile path specified")
+        if path not in self._entries:
+            raise ValueError(
+                "dotfile %s does not exist in the inventory" % path)
+
+        del self._entries[path]
 
     @property
     def file(self):
@@ -53,7 +102,7 @@ class Inventory(object):
     __bool__ = __nonzero__  # for Python 3.x
 
     def __len__(self):
-        """Length of :class:`Inventory` equals number of entries."""
+        """Length of :class:`Inventory` equals number of its entries."""
         return len(self._entries)
 
     def __iter__(self):
@@ -63,8 +112,8 @@ class Inventory(object):
         return self._entries.itervalues()
 
     def __getitem__(self, path):
-        """Indexing retrieves :class:`InventoryEntry` object corresponding to
-        dotfile of given path.
+        """Indexing retrieves :class:`InventoryEntry` object
+        corresponding to dotfile of given path.
         """
         return self._entries[path]
 
