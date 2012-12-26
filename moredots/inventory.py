@@ -60,7 +60,7 @@ class Inventory(object):
         """
         if not path:
             raise ValueError("no dotfile path specified")
-        if path in self._entries:
+        if path in self:
             raise ValueError(
                 "dotfile %s already exists in the inventory" % path)
 
@@ -77,7 +77,7 @@ class Inventory(object):
         """
         if not path:
             raise ValueError("no dotfile path specified")
-        if path not in self._entries:
+        if path not in self:
             raise ValueError(
                 "dotfile %s does not exist in the inventory" % path)
         if not kwargs:
@@ -94,7 +94,7 @@ class Inventory(object):
         """
         if not path:
             raise ValueError("no dotfile path specified")
-        if path not in self._entries:
+        if path not in self:
             raise ValueError(
                 "dotfile %s does not exist in the inventory" % path)
 
@@ -115,6 +115,10 @@ class Inventory(object):
         """Casting to bool yields True if inventory contains entries."""
         return bool(self._entries)
     __bool__ = __nonzero__  # for Python 3.x
+
+    def __contains__(self, path):
+        """Operator `in` allows to check if dotfiles exists in inventory."""
+        return path in self._entries
 
     def __len__(self):
         """Length of :class:`Inventory` equals number of its entries."""
