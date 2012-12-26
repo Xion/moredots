@@ -36,12 +36,14 @@ class Inventory(object):
                 (entry.path, entry)
                 for entry in imap(InventoryEntry, f.readlines())
             )
+            self._dirty = False
 
     def save(self):
         """Saves inventory records to ``self.file``."""
         with open(self.file, 'w') as f:
             for entry in self.entries.itervalues():
                 entry.dumps(f)
+            self._dirty = False
 
     def add(self, path, **kwargs):
         """Adds a dotfile to this inventory.
@@ -58,6 +60,7 @@ class Inventory(object):
                 "dotfile %s already exists in the inventory" % path)
 
         self._entries[path] = InventoryEntry(path, **kwargs)
+        self._dirty = True
 
     def update(self, path, **kwargs):
         """Updates entry data for given dotfile.
@@ -78,6 +81,7 @@ class Inventory(object):
         entry = self._entries[path]
         for name, value in kwargs.iteritems():
             setattr(entry, name, value)
+            self._dirty = True
 
     def remove(self, path):
         """Removes dotfile from this inventory.
@@ -90,11 +94,17 @@ class Inventory(object):
                 "dotfile %s does not exist in the inventory" % path)
 
         del self._entries[path]
+        self._dirty = True
 
     @property
     def file(self):
         """Full path to the inventory data file."""
         return os.path.join(self.repo.dir, INVENTORY_FILE)
+
+    @property
+    def dirty(self):
+        """Flag indicating whether inventory was saved since last change."""
+        return self._dirty
 
     def __nonzero__(self):
         """Casting to bool yields True if inventory contains entries."""
@@ -116,6 +126,16 @@ class Inventory(object):
         corresponding to dotfile of given path.
         """
         return self._entries[path]
+
+    def __enter__(self):
+        """Using :class:`Inventory` as context manager ensures :meth:`save`
+        is called at the end of ``with`` block.
+        """
+        return self  # __exit__ does all the work
+
+    def __exit__(self, type, value, traceback):
+        """Exiting ``with`` block always calls :meth:`save`."""
+        self.save()
 
 
 class InventoryEntry(object):
