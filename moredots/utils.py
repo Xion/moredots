@@ -36,6 +36,16 @@ def objectproperty(func):
 
 # Path manipulation
 
+def relative_path(path, base):
+    """Turns given path into relative one (wrt to given base)
+    if the path isn't relative already.
+    :return: Relative ``path``
+    """
+    if os.path.isabs(path):
+        return os.path.relpath(path, start=base)
+    return path
+
+
 def remove_dot(path):
     """Removes the leading dot from the childmost path fragment.
     :return: Modified path

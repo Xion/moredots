@@ -5,6 +5,8 @@ meta-information about dotfiles stored within dotfile repository.
 import os
 from itertools import imap
 
+from moredots.utils import relative_path
+
 
 __all__ = ['Inventory']
 
@@ -53,16 +55,13 @@ class Inventory(object):
     def add(self, path, **kwargs):
         """Adds a dotfile to this inventory.
 
-        :param path: Path to the dotfile, relative to repository root directory
+        :param path: Path to the dotfile in the dotfile repository,
+                     either absolute or relative
 
         Additional keyword arguments are stored within the inventory entry
         for the file.
         """
-        if not path:
-            raise ValueError("no dotfile path specified")
-        if path in self:
-            raise ValueError(
-                "dotfile %s already exists in the inventory" % path)
+        path = self._preprocess_path(path, existing=False)
 
         self._entries[path] = InventoryEntry(path, **kwargs)
         self._dirty = True
@@ -70,16 +69,13 @@ class Inventory(object):
     def update(self, path, **kwargs):
         """Updates entry data for given dotfile.
 
-        :param path: Path to the dotfile, relative to repository root directory
+        :param path: Path to the dotfile in the dotfile repository,
+                     either absolute or relative
 
         Keyword arguments specify which entry data should be updated
         and new values for the keys.
         """
-        if not path:
-            raise ValueError("no dotfile path specified")
-        if path not in self:
-            raise ValueError(
-                "dotfile %s does not exist in the inventory" % path)
+        path = self._preprocess_path(path, existing=True)
         if not kwargs:
             raise TypeError("update() requires at least one keyword argument")
 
@@ -90,13 +86,11 @@ class Inventory(object):
 
     def remove(self, path):
         """Removes dotfile from this inventory.
-        :param path: Path to the dotfile, relative to repository root directory
+
+        :param path: Path to the dotfile in the dotfile repository,
+                     either absolute or relative
         """
-        if not path:
-            raise ValueError("no dotfile path specified")
-        if path not in self:
-            raise ValueError(
-                "dotfile %s does not exist in the inventory" % path)
+        path = self._preprocess_path(path, existing=True)
 
         del self._entries[path]
         self._dirty = True
@@ -110,6 +104,29 @@ class Inventory(object):
     def dirty(self):
         """Flag indicating whether inventory was saved since last change."""
         return self._dirty
+
+    # Internal methods
+
+    def _preprocess_path(self, path, existing):
+        """Preprocess path given to add/update/remove methods.
+
+        :param path: Path to process (absolute or relative)
+        :param existing: Whether the dotfile path is expected to already exist
+                         in this inventory
+
+        :return: Path relative to dotfile repository root directory
+        """
+        if not path:
+            raise ValueError("no dotfile path specified")
+
+        path = relative_path(path, base=self.repo.dir)
+        if (path in self) != existing:
+            msg = "already exists" if path in self else "does not exist"
+            raise ValueError("dotfile %s %s in the inventory" % (path, msg))
+
+        return path
+
+    # Python special methods
 
     def __nonzero__(self):
         """Casting to bool yields True if inventory contains entries."""

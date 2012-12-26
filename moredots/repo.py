@@ -6,6 +6,7 @@ import os
 import git
 
 from moredots import exc
+from moredots.inventory import Inventory
 from moredots.utils import objectproperty, remove_dot, restore_dot
 
 
@@ -33,6 +34,8 @@ class DotfileRepo(object):
         if isinstance(repo, basestring):
             repo = git.Repo(repo, odbt=git.GitCmdObjectDB)
         self.git_repo = repo
+
+        self.inventory = Inventory(self)
 
     def __repr__(self):
         """Textual representation of repo object."""
@@ -90,7 +93,8 @@ class DotfileRepo(object):
         os.rename(path_in_home, path_in_repo)
         link_func(path_in_repo, path_in_home)  # order like shell `ln`
 
-        # TODO: save the file information in registry
+        with self.inventory as inv:
+            inv.add(path_in_repo, hardlink=hardlink)
 
         relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("add %s" % relative_filepath, add=path_in_repo)
@@ -114,6 +118,9 @@ class DotfileRepo(object):
         # TODO: for hardlinks, we can simply remove the in-repo file
         # instead of removing the home-dir file and doing the rename
         os.rename(path_in_repo, path_in_home)
+
+        with self.inventory as inv:
+            inv.remove(path_in_repo)
 
         relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("remove %s" % relative_filepath, remove=path_in_repo)
@@ -157,6 +164,7 @@ class DotfileRepo(object):
         # set up remote branch tracking for subsequent `mdots sync`
         self.git_repo.head.ref.set_tracking_branch(origin.refs.master)
 
+        self.inventory.load()
         self._install_dotfiles()
 
     @property
