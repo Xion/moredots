@@ -2,15 +2,13 @@
 Tests for the :class:`DotfileRepo` class.
 """
 import os
-import string
-import random
 
 import pytest
 
 from moredots import exc
 from moredots.repo import DotfileRepo
 
-from tests.utils import random_string
+from tests.conftest import empty_repo, filled_repo
 
 
 # Tests
@@ -154,42 +152,6 @@ class TestSync(object):
 # Fixtures / resources
 
 @pytest.fixture
-def repo_dir(tmpdir):
-    """Directory to place the dotfile repo in."""
-    return str(tmpdir.mkdir('repo'))
-
-
-@pytest.fixture
-def home_dir(tmpdir):
-    """Directory to act as $HOME for the dotfile repo."""
-    return str(tmpdir.mkdir('home'))
-
-
-@pytest.fixture
-def remote_dir(tmpdir):
-    """Directory for "remote" dotfiles repository."""
-    return str(tmpdir.mkdir('remote'))
-
-
-@pytest.fixture
-def empty_repo(repo_dir, home_dir):
-    """Empty moredots repository."""
-    return DotfileRepo.init(repo_dir, home_dir)
-
-
-@pytest.fixture
-def filled_repo(repo_dir, home_dir):
-    """Moredots repository with at least one dotfile."""
-    repo = DotfileRepo.init(repo_dir, home_dir)
-
-    # add some dotfiles
-    for _ in xrange(random.randint(1, 5)):
-        repo.add(dotfile(home_dir, dotfile_name()))
-
-    return repo
-
-
-@pytest.fixture
 def empty_remote_url(remote_dir, home_dir):
     """Empty dotfiles repository to act as remote,
     to install from or sync with it.
@@ -208,20 +170,3 @@ def filled_remote_url(remote_dir, home_dir):
     # see the comment about home_dir above
     repo = filled_repo(remote_dir, home_dir)
     return 'file://' + repo.dir
-
-
-@pytest.fixture
-def dotfile(home_dir, dotfile_name):
-    """A dotfile inside home directory.
-    :return: Name of a dotfile
-    """
-    path = os.path.join(home_dir, dotfile_name)
-    with open(path, 'w') as f:
-        print >>f, random_string()
-    return path
-
-
-@pytest.fixture
-def dotfile_name():
-    """Random name of a dotfile."""
-    return "." + random_string(chars=string.ascii_letters, length=16)

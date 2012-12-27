@@ -3,16 +3,25 @@ Tests for the :class:`Inventory` class and related code.
 """
 import os
 import string
+import random
 from StringIO import StringIO
 
 import pytest
 
-from moredots.inventory import Inventory, InventoryEntry
+from moredots.inventory import Inventory, InventoryEntry, INVENTORY_FILE
 
 from tests.utils import random_string
 
 
 # Tests
+
+class TestInventory(object):
+
+    def test_load_empty(self, repo_with_empty_inventory):
+        inventory = Inventory(repo_with_empty_inventory)
+        inventory.load()
+        assert len(inventory) == 0
+
 
 class TestInventoryEntry(object):
 
@@ -69,6 +78,30 @@ class TestInventoryEntry(object):
 
 
 # Fixtures / resources
+
+@pytest.fixture
+def inventory_file_path(empty_repo):
+    """Path to inventory file within an empty repo."""
+    return os.path.join(empty_repo.dir, INVENTORY_FILE)
+
+
+@pytest.fixture
+def repo_with_empty_inventory(empty_repo, inventory_file_path):
+    """Dotfile repo with empty inventory file (i.e. file of zero length)."""
+    open(inventory_file_path, 'w').close()
+    return empty_repo
+
+
+@pytest.fixture
+def repo_with_filled_inventory(empty_repo, inventory_file_path):
+    """Dotfile repo with andomly generated inventory file
+    containing at least one dotfile entry.
+    """
+    with open(inventory_file_path, 'w') as f:
+        for _ in xrange(random.randint(1, 10)):
+            InventoryEntry(dotfile_path(), hardlink=False).dump(f)
+    return empty_repo
+
 
 @pytest.fixture
 def dotfile_path():
