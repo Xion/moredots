@@ -8,8 +8,6 @@ import pytest
 from moredots import exc
 from moredots.repo import DotfileRepo
 
-from tests.conftest import empty_repo, filled_repo
-
 
 # Tests
 
@@ -58,26 +56,26 @@ class TestInstall(object):
 
 class TestAdd(object):
 
-    def test_add_file_to_empty(self, empty_repo, dotfile):
+    def test_add_file_to_empty(self, empty_repo, dotfile_in_home):
         repo = empty_repo
-        repo.add(dotfile)
+        repo.add(dotfile_in_home)
 
-        _, name = os.path.split(dotfile)
+        _, name = os.path.split(dotfile_in_home)
         assert os.path.exists(os.path.join(repo.dir, name[1:]))
 
-    def test_add_file_to_nonempty(self, filled_repo, dotfile):
+    def test_add_file_to_nonempty(self, filled_repo, dotfile_in_home):
         repo = filled_repo
-        repo.add(dotfile)
+        repo.add(dotfile_in_home)
 
-        _, name = os.path.split(dotfile)
+        _, name = os.path.split(dotfile_in_home)
         assert os.path.exists(os.path.join(repo.dir, name[1:]))
 
-    def test_add_existing_file(self, empty_repo, dotfile):
+    def test_add_existing_file(self, empty_repo, dotfile_in_home):
         repo = empty_repo
-        repo.add(dotfile)
+        repo.add(dotfile_in_home)
 
         with pytest.raises(exc.DuplicateDotfileError):
-            repo.add(dotfile)
+            repo.add(dotfile_in_home)
 
 
 class TestRemove(object):
@@ -107,12 +105,12 @@ class TestRemove(object):
             repo.remove(dotfile)
 
 
-def test_add_and_remove_file(empty_repo, dotfile):
+def test_add_and_remove_file(empty_repo, dotfile_in_home):
     repo = empty_repo
-    repo.add(dotfile)
-    repo.remove(dotfile)
+    repo.add(dotfile_in_home)
+    repo.remove(dotfile_in_home)
 
-    _, name = os.path.split(dotfile)
+    _, name = os.path.split(dotfile_in_home)
     assert not os.path.exists(os.path.join(repo.dir, name[1:]))
 
 
@@ -147,26 +145,3 @@ class TestSync(object):
     def test_sync_with_unrelated_remote(self, filled_repo, filled_remote_url):
         with pytest.raises(exc.UnrelatedRemoteError):
             filled_repo.sync(filled_remote_url)
-
-
-# Fixtures / resources
-
-@pytest.fixture
-def empty_remote_url(remote_dir, home_dir):
-    """Empty dotfiles repository to act as remote,
-    to install from or sync with it.
-    """
-    # home_dir doesn't matter, it can be the same as the one for "local"
-    # repo because the "remote" one is not using it at all
-    repo = empty_repo(remote_dir, home_dir)
-    return 'file://' + repo.dir
-
-
-@pytest.fixture
-def filled_remote_url(remote_dir, home_dir):
-    """Moredots repository with at least one dotfile
-    that can act as remote, to install from or sync with it.
-    """
-    # see the comment about home_dir above
-    repo = filled_repo(remote_dir, home_dir)
-    return 'file://' + repo.dir

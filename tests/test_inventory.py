@@ -2,7 +2,6 @@
 Tests for the :class:`Inventory` class and related code.
 """
 import os
-import string
 import random
 from StringIO import StringIO
 
@@ -10,6 +9,7 @@ import pytest
 
 from moredots.inventory import Inventory, InventoryEntry, INVENTORY_FILE
 
+from tests.conftest import dotfile_name
 from tests.utils import random_string
 
 
@@ -19,8 +19,12 @@ class TestInventory(object):
 
     def test_load_empty(self, repo_with_empty_inventory):
         inventory = Inventory(repo_with_empty_inventory)
-        inventory.load()
         assert len(inventory) == 0
+
+    def test_load_filled(self, repo_with_filled_inventory, inventory_file_path):
+        inventory = Inventory(repo_with_filled_inventory)
+        with open(inventory_file_path) as f:
+            assert len(inventory) == len(f.readlines()) > 0
 
 
 class TestInventoryEntry(object):
@@ -29,15 +33,15 @@ class TestInventoryEntry(object):
         with pytest.raises(TypeError):
             InventoryEntry()
 
-    def test_create_with_only_positional_path(self, dotfile_path):
+    def test_create_with_only_positional_path(self, dotfile_name):
         # need at least one other argument
         # or first one will be interpreted as textual repr. of entry
-        entry = InventoryEntry(dotfile_path, hardlink=False)
-        assert entry.path == dotfile_path
+        entry = InventoryEntry(dotfile_name, hardlink=False)
+        assert entry.path == dotfile_name
 
-    def test_create_with_only_keyword_path(self, dotfile_path):
-        entry = InventoryEntry(path=dotfile_path)
-        assert entry.path == dotfile_path
+    def test_create_with_only_keyword_path(self, dotfile_name):
+        entry = InventoryEntry(path=dotfile_name)
+        assert entry.path == dotfile_name
 
     def test_create_with_keyword_args(self, entry_data):
         entry = InventoryEntry(**entry_data)
@@ -99,20 +103,14 @@ def repo_with_filled_inventory(empty_repo, inventory_file_path):
     """
     with open(inventory_file_path, 'w') as f:
         for _ in xrange(random.randint(1, 10)):
-            InventoryEntry(dotfile_path(), hardlink=False).dump(f)
+            InventoryEntry(dotfile_name(), hardlink=False).dump(f)
     return empty_repo
 
 
 @pytest.fixture
-def dotfile_path():
-    """Random dotfile path."""
-    return random_string(chars=string.ascii_lowercase + '/', length=32)
-
-
-@pytest.fixture
-def entry_data(dotfile_path):
+def entry_data(dotfile_name):
     """Dictionary of keyword args for ;class:`InventoryEntry` constructor."""
-    return dict(path=dotfile_path, hardlink=False)
+    return dict(path=dotfile_name, hardlink=False)
 
 
 @pytest.fixture

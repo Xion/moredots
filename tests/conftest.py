@@ -5,8 +5,6 @@ import os
 import random
 import string
 
-import git
-
 import pytest
 
 from moredots.repo import DotfileRepo
@@ -14,13 +12,7 @@ from moredots.repo import DotfileRepo
 from tests.utils import random_string
 
 
-# Fixtures / resources
-
-@pytest.fixture
-def git_repo(tmpdir):
-    """Provides a local Git repository, created in a temporary directory."""
-    return git.Repo.init(str(tmpdir))
-
+# Directories
 
 @pytest.fixture
 def repo_dir(tmpdir):
@@ -40,6 +32,8 @@ def remote_dir(tmpdir):
     return str(tmpdir.mkdir('remote'))
 
 
+# Repositories & remotes for them
+
 @pytest.fixture
 def empty_repo(repo_dir, home_dir):
     """Empty moredots repository."""
@@ -53,13 +47,36 @@ def filled_repo(repo_dir, home_dir):
 
     # add some dotfiles
     for _ in xrange(random.randint(1, 5)):
-        repo.add(dotfile(home_dir, dotfile_name()))
+        repo.add(dotfile_in_home(home_dir, dotfile_name()))
 
     return repo
 
 
 @pytest.fixture
-def dotfile(home_dir, dotfile_name):
+def empty_remote_url(remote_dir, home_dir):
+    """Empty dotfiles repository to act as remote,
+    to install from or sync with it.
+    """
+    # home_dir doesn't matter, it can be the same as the one for "local"
+    # repo because the "remote" one is not using it at all
+    repo = empty_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
+
+
+@pytest.fixture
+def filled_remote_url(remote_dir, home_dir):
+    """Moredots repository with at least one dotfile
+    that can act as remote, to install from or sync with it.
+    """
+    # see the comment about home_dir above
+    repo = filled_repo(remote_dir, home_dir)
+    return 'file://' + repo.dir
+
+
+# Dotfiles
+
+@pytest.fixture
+def dotfile_in_home(home_dir, dotfile_name):
     """A dotfile inside home directory.
     :return: Name of a dotfile
     """
@@ -71,5 +88,5 @@ def dotfile(home_dir, dotfile_name):
 
 @pytest.fixture
 def dotfile_name():
-    """Random name of a dotfile."""
+    """Random name of a dotfile (without any path fragment)."""
     return "." + random_string(chars=string.ascii_letters, length=16)
