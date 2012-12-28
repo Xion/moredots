@@ -17,14 +17,60 @@ from tests.utils import random_string
 
 class TestInventory(object):
 
-    def test_load_empty(self, repo_with_empty_inventory):
-        inventory = Inventory(repo_with_empty_inventory)
-        assert len(inventory) == 0
+    def test_load_empty(self, empty_inventory):
+        assert len(empty_inventory) == 0
 
-    def test_load_filled(self, repo_with_filled_inventory, inventory_file_path):
-        inventory = Inventory(repo_with_filled_inventory)
+    def test_load_filled(self, filled_inventory, inventory_file_path):
         with open(inventory_file_path) as f:
-            assert len(inventory) == len(f.readlines()) > 0
+            assert len(filled_inventory) == len(f.readlines()) > 0
+
+    def test_add_requires_path(self, empty_inventory):
+        with pytest.raises(ValueError):
+            empty_inventory.add("")
+
+    def test_add_fails_on_existing(self, filled_inventory, dotfile_in_inventory):
+        with pytest.raises(ValueError):
+            filled_inventory.add(dotfile_in_inventory)
+
+    def test_add_creates_entry(self, empty_inventory, dotfile_name):
+        inv = empty_inventory
+        inv.add(dotfile_name)
+
+        assert len(inv) == 1
+        assert dotfile_name in inv
+
+    def test_add_saves_kwargs(self, empty_inventory, dotfile_name):
+        repo = empty_inventory
+        repo.add(dotfile_name, hardlink=True)
+
+        assert repo[dotfile_name].hardlink == True
+
+    def test_update_requires_existing(self, empty_inventory, dotfile_name):
+        with pytest.raises(ValueError):
+            empty_inventory.update(dotfile_name, hardlink=True)
+
+    def test_update_requires_kwargs(self, filled_inventory, dotfile_in_inventory):
+        with pytest.raises(TypeError):
+            filled_inventory.update(dotfile_in_inventory)
+
+    def test_update_works(self, filled_inventory, dotfile_in_inventory):
+        filled_inventory.update(dotfile_in_inventory, hardlink=True)
+        assert filled_inventory[dotfile_in_inventory].hardlink == True
+
+    def test_remove_requires_path(self, empty_inventory):
+        with pytest.raises(ValueError):
+            empty_inventory.remove("")
+
+    def test_remove_requires_existing(self, empty_inventory, dotfile_name):
+        with pytest.raises(ValueError):
+            empty_inventory.remove(dotfile_name)
+
+    def test_remove_works(self, filled_inventory, dotfile_in_inventory):
+        count_before = len(filled_inventory)
+        filled_inventory.remove(dotfile_in_inventory)
+        count_after = len(filled_inventory)
+
+        assert count_before == count_after + 1
 
 
 class TestInventoryEntry(object):
@@ -90,21 +136,27 @@ def inventory_file_path(empty_repo):
 
 
 @pytest.fixture
-def repo_with_empty_inventory(empty_repo, inventory_file_path):
-    """Dotfile repo with empty inventory file (i.e. file of zero length)."""
+def empty_inventory(empty_repo, inventory_file_path):
+    """Inventory object based on zero-size inventor file."""
     open(inventory_file_path, 'w').close()
-    return empty_repo
+    return Inventory(empty_repo)
 
 
 @pytest.fixture
-def repo_with_filled_inventory(empty_repo, inventory_file_path):
-    """Dotfile repo with andomly generated inventory file
+def filled_inventory(empty_repo, inventory_file_path):
+    """Inventory object based on randomly generated inventory file
     containing at least one dotfile entry.
     """
     with open(inventory_file_path, 'w') as f:
         for _ in xrange(random.randint(1, 10)):
             InventoryEntry(dotfile_name(), hardlink=False).dump(f)
-    return empty_repo
+    return Inventory(empty_repo)
+
+
+@pytest.fixture
+def dotfile_in_inventory(filled_inventory):
+    """Path to dotfile which is already in a inventory."""
+    return next(iter(filled_inventory)).path
 
 
 @pytest.fixture
