@@ -2,12 +2,6 @@
 moredots -- root file
 :author: Karol Kuczmarski "Xion"
 """
-# TODO: it's a horrible mess -- divide it into modules, refactor & add tests
-
-import os
-
-import git
-
 from moredots.cmdline import create_argument_parser
 from moredots.repo import DotfileRepo
 
@@ -28,11 +22,6 @@ def main():
 
 def handle_init(repo_dir, home_dir):
     """Initialize dotfiles repository."""
-    repo_gitdir = os.path.join(repo_dir, '.git')
-    if git.repo.fun.is_git_dir(repo_gitdir):
-        print "fatal: %s is already a Git repository" % repo_dir
-        return
-
     DotfileRepo.init(repo_dir, home_dir)
 
 
@@ -55,9 +44,4 @@ def handle_sync(repo, remote_url):
 
 def handle_install(remote_url, repo_dir, home_dir):
     """Installs remote dotfiles repository on this machine."""
-    repo_gitdir = os.path.join(repo_dir, '.git')
-    if git.repo.fun.is_git_dir(repo_gitdir):
-        print "fatal: %s is already a Git repository" % repo_dir
-        return
-
     DotfileRepo.install(remote_url, repo_dir, home_dir)

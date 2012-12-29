@@ -111,12 +111,10 @@ class DotfileRepo(object):
         if not os.path.exists(path_in_repo):
             raise exc.DotfileNotFoundError(path, repo=self)
 
+        # restore the dotfile back into $HOME directory
         if os.path.exists(path_in_home):
             os.unlink(path_in_home)  # TODO: also check if it's symlink
                                      # when symlink is expected
-
-        # TODO: for hardlinks, we can simply remove the in-repo file
-        # instead of removing the home-dir file and doing the rename
         os.rename(path_in_repo, path_in_home)
 
         with self.inventory as inv:
