@@ -4,16 +4,18 @@ moredots -- Setup file
 """
 from setuptools import setup, find_packages
 
+import moredots
+
 
 setup(
     name="moredots",
-    version="0.0.2",
+    version=moredots.__version__,
     description="Managing dotfiles with Git and grace",
     long_description=open('README.rst').read(),
     url='https://github.com/Xion/moredots',
-    author='Karol Kuczmarski "Xion"',
+    author=moredots.__author__,
     author_email='karol.kuczmarski@gmail.com',
-    license='GPLv3',
+    license=moredots.__license__,
 
     classifiers=[
         'Development Status :: 1 - Planning',
@@ -36,6 +38,6 @@ setup(
 
     packages=find_packages(),
     entry_points={
-        'console_scripts': ['mdots=moredots:main'],
+        'console_scripts': ['mdots=moredots.main:main'],
     }
 )
