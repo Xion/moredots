@@ -236,7 +236,7 @@ class InventoryEntry(object):
                              should be included at the beginning
         """
         data = ((name, getattr(self, name)) for name in self.__slots__
-                if name != 'path')
+                if name != 'path' and hasattr(self, name))
 
         result = sep.join("%s=%s" % kvp for kvp in data)
         if include_path:

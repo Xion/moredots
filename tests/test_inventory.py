@@ -24,6 +24,11 @@ class TestInventory(object):
         with open(inventory_file_path) as f:
             assert len(filled_inventory) == len(f.readlines()) > 0
 
+    def test_save_empty(self, empty_inventory, inventory_file_path):
+        empty_inventory.save()
+        with open(inventory_file_path) as f:
+            assert len(f.readlines()) == 0
+
     def test_add_requires_path(self, empty_inventory):
         with pytest.raises(ValueError):
             empty_inventory.add("")
@@ -71,6 +76,28 @@ class TestInventory(object):
         count_after = len(filled_inventory)
 
         assert count_before == count_after + 1
+
+    def test_save_after_add(self, empty_inventory, inventory_file_path, dotfile_name):
+        inv = empty_inventory
+        inv.add(dotfile_name)
+        inv.save()
+
+        with open(inventory_file_path) as f:
+            lines = f.readlines()
+        assert len(lines) == 1
+        assert lines[0].startswith(dotfile_name)
+
+    def test_save_after_remove(self, filled_inventory, inventory_file_path,
+                               dotfile_in_inventory):
+        inv = filled_inventory
+        count_before = len(filled_inventory)
+        inv.remove(dotfile_in_inventory)
+        inv.save()
+
+        with open(inventory_file_path) as f:
+            lines = f.readlines()
+        assert count_before == len(lines) + 1
+        assert not any(line.startswith(dotfile_in_inventory) for line in lines)
 
 
 class TestInventoryEntry(object):
