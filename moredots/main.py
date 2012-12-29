@@ -63,6 +63,14 @@ def error_handler(command):
         yield
     except exc.RepositoryExistsError, e:
         print "fatal: a repository already exists in " + e.repo_dir
+    except exc.InvalidHomeDirError, e:
+        print "fatal: cannot use %s as home directory" % e.home_dir
+    except exc.DuplicateDotfileError, e:
+        print "fatal: file %s already exists in the repository" % e.path
+    except exc.DotfileNotFoundError, e:
+        print "fatal: file %s does not exist in the repository" % e.path
+    except exc.NoRemoteError:
+        print "fatal: no remote to sync the repository with"
 
 
 if __name__ == '__main__':

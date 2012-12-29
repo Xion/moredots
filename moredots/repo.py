@@ -33,8 +33,14 @@ class DotfileRepo(object):
         """
         if isinstance(repo, basestring):
             repo = git.Repo(repo, odbt=git.GitCmdObjectDB)
-        self.git_repo = repo
 
+        # integrity checks for repository
+        home_file = os.path.join(repo.git_dir, HOME_FILE)
+        if not all([git.repo.fun.is_git_dir(repo.git_dir),
+                    os.path.exists(home_file)]):
+            raise exc.InvalidRepositoryError(repo.working_dir)
+
+        self.git_repo = repo
         self.inventory = Inventory(self)
 
     def __repr__(self):
@@ -85,8 +91,10 @@ class DotfileRepo(object):
         :raise: ``exc.DuplicateDotfileError`` if the file already exists
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
+        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
+
         if os.path.exists(path_in_repo):
-            raise exc.DuplicateDotfileError(path, repo=self)
+            raise exc.DuplicateDotfileError(relative_filepath, repo=self)
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink
@@ -96,7 +104,6 @@ class DotfileRepo(object):
         with self.inventory as inv:
             inv.add(path_in_repo, hardlink=hardlink)
 
-        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("add %s" % relative_filepath, add=path_in_repo)
 
     def remove(self, path):
@@ -108,8 +115,10 @@ class DotfileRepo(object):
         :raise: ``exc.DotfileNotFoundError`` if dotfile is not in the repo
         """
         path_in_home, path_in_repo = self._filepath_pair(path)
+        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
+
         if not os.path.exists(path_in_repo):
-            raise exc.DotfileNotFoundError(path, repo=self)
+            raise exc.DotfileNotFoundError(relative_filepath, repo=self)
 
         # restore the dotfile back into $HOME directory
         if os.path.exists(path_in_home):
@@ -120,7 +129,6 @@ class DotfileRepo(object):
         with self.inventory as inv:
             inv.remove(path_in_repo)
 
-        relative_filepath = os.path.relpath(path_in_home, start=self.home_dir)
         self._commit("remove %s" % relative_filepath, remove=path_in_repo)
 
     def sync(self, url=None):

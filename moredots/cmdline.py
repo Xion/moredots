@@ -6,6 +6,7 @@ import argparse
 
 import git
 
+from moredots import exc
 from moredots.repo import DotfileRepo
 
 
@@ -198,4 +199,7 @@ def dotfile_repo(repo_dir):
         return DotfileRepo(repo_dir)
     except git.InvalidGitRepositoryError:
         msg = "fatal: %s is not a moredots repository" % repo_dir
+        raise argparse.ArgumentError(msg)
+    except exc.InvalidRepositoryError:
+        msg = "fatal: %s is invalid moredots repository" % repo_dir
         raise argparse.ArgumentError(msg)

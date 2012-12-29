@@ -79,6 +79,13 @@ class InvalidHomeDirError(RepositoryError):
                                         self.repo_dir, self.home_dir)
 
 
+class InvalidRepositoryError(RepositoryError):
+    """Error raised when repository specified for add/remove/etc. commands
+    is invalid or corrupted.
+    """
+    pass
+
+
 # Synchronization errors
 
 class SynchronizationError(Exception):
