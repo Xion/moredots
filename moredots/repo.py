@@ -15,6 +15,13 @@ from moredots.utils import (objectproperty, normalize_path,
 __all__ = ['DotfileRepo']
 
 
+#: Tuple for storing paths to dotfile:
+#: - ``path`` is the relative one (with dot), used for inventory metadata
+#: - ``home_path`` is absolute path inside $HOME (with dot)
+#: - ``repo_path`` is absolute path inside repo (without dot)
+Dotfile = namedtuple('Dotfile', ['path', 'home_path', 'repo_path'])
+
+
 HOME_FILE = 'mdots_home'
 
 DEFAULT_REPO_DIR = os.path.expanduser('~/dotfiles')
@@ -86,19 +93,19 @@ class DotfileRepo(object):
 
         :raise: ``exc.DuplicateDotfileError`` if the file already exists
         """
-        path = self._dotfile_path(path)
-        if os.path.exists(path.in_repo):
-            raise exc.DuplicateDotfileError(path.relative, repo=self)
+        dotfile = self._dotfile(path)
+        if os.path.exists(dotfile.repo_path):
+            raise exc.DuplicateDotfileError(dotfile.path, repo=self)
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink
-        os.rename(path.in_home, path.in_repo)
-        link_func(path.in_repo, path.in_home)  # order like shell `ln`
+        os.rename(dotfile.home_path, dotfile.repo_path)
+        link_func(dotfile.repo_path, dotfile.home_path)  # order like shell `ln`
 
         with self.inventory as inv:
-            inv.add(path.relative, hardlink=hardlink)
+            inv.add(dotfile.path, hardlink=hardlink)
 
-        self._commit("add %s" % path.relative, add=path.in_repo)
+        self._commit("add %s" % dotfile.path, add=dotfile.repo_path)
 
     def remove(self, path):
         """Removes dotfile from the dotfile repository.
@@ -108,20 +115,20 @@ class DotfileRepo(object):
 
         :raise: ``exc.DotfileNotFoundError`` if dotfile is not in the repo
         """
-        path = self._dotfile_path(path)
-        if not os.path.exists(path.in_repo):
-            raise exc.DotfileNotFoundError(path.relative, repo=self)
+        dotfile = self._dotfile(path)
+        if not os.path.exists(dotfile.repo_path):
+            raise exc.DotfileNotFoundError(dotfile.path, repo=self)
 
         # restore the dotfile back into $HOME directory
-        if os.path.exists(path.in_home):
-            os.unlink(path.in_home)  # TODO: also check if it's symlink
-                                     # when symlink is expected
-        os.rename(path.in_repo, path.in_home)
+        if os.path.exists(dotfile.home_path):
+            os.unlink(dotfile.home_path)  # TODO: also check if it's symlink
+                                          # when symlink is expected
+        os.rename(dotfile.repo_path, dotfile.home_path)
 
         with self.inventory as inv:
-            inv.remove(path.relative)
+            inv.remove(dotfile.path)
 
-        self._commit("remove %s" % path.relative, remove=path.in_repo)
+        self._commit("remove %s" % dotfile.path, remove=dotfile.repo_path)
 
     def sync(self, url=None):
         """Synchronizes dotfiles repository with a remote one.
@@ -172,8 +179,8 @@ class DotfileRepo(object):
 
     @property
     def dotfiles(self):
-        """Iterable of absolute paths to all dotfiles
-        stored within this repository.
+        """Iterable of all dotfiles stored within this repository.
+        Yields :class:`Dotfile` objects.
         """
         for directory, subdirs, filenames in os.walk(self.dir):
             for skipdir in ('.git',):
@@ -184,7 +191,7 @@ class DotfileRepo(object):
                 if filename.startswith('.'):  # these are repo's own dotfiles,
                     continue                  # such as .gitignore
 
-                yield os.path.join(directory, filename)
+                yield self._dotfile(os.path.join(directory, filename))
 
     @objectproperty
     def home_dir():
@@ -245,17 +252,17 @@ class DotfileRepo(object):
         """Install all tracked dotfiles from the repo, (sym)linking
         to them from home directory.
         """
-        for path in map(self._dotfile_path, self.dotfiles):
-            if os.path.exists(path.in_home):
-                os.unlink(path.in_home)
+        for dotfile in self.dotfiles:
+            if os.path.exists(dotfile.home_path):
+                os.unlink(dotfile.home_path)
 
             # install the dotfile, creating a (sym)link from home directory
-            is_hardlink = (self.inventory[path.relative].hardlink
-                           if path.relative in self.inventory else False)
+            is_hardlink = (self.inventory[dotfile.path].hardlink
+                           if dotfile.path in self.inventory else False)
             link_func = os.link if is_hardlink else os.symlink
-            link_func(path.in_repo, path.in_home)
+            link_func(dotfile.repo_path, dotfile.home_path)
 
-    def _dotfile_path(self, filepath):
+    def _dotfile(self, filepath):
         """Given a path to a dotfile, returns a complete tuple of all relevant
         paths to this dotfile, including the relative one, the one inside
         repo's $HOME directory, and the one inside repo itself.
@@ -263,38 +270,41 @@ class DotfileRepo(object):
         :param filepath: Either of the two (absolute) paths or equivalent
                          relative path
 
-        :return: ``DotfilePath`` named tuple
+        :return: ``Dotfile`` named tuple
 
         .. note;: Existence of either of files involved is not checked.
         """
+        # TODO: turn `Dotfile` into proper class
+        # and put all this code inside its constructor
+
         if not filepath:
             raise ValueError("empty dotfile path")
 
         # case 1: relative path
         if not os.path.isabs(filepath):
-            return DotfilePath(
-                relative=normalize_path(filepath),
-                in_home=os.path.join(self.home_dir, filepath),
-                in_repo=os.path.join(self.dir, remove_dot(filepath)),
+            return Dotfile(
+                path=normalize_path(filepath),
+                home_path=os.path.join(self.home_dir, filepath),
+                repo_path=os.path.join(self.dir, remove_dot(filepath)),
             )
 
         # case 2: absolute path inside $HOME
         if os.path.commonprefix([filepath, self.home_dir]) == self.home_dir:
             relative_path = os.path.relpath(filepath, start=self.home_dir)
-            return DotfilePath(
-                relative=normalize_path(relative_path),
-                in_home=filepath,
-                in_repo=os.path.join(self.dir, remove_dot(relative_path)),
+            return Dotfile(
+                path=normalize_path(relative_path),
+                home_path=filepath,
+                repo_path=os.path.join(self.dir, remove_dot(relative_path)),
             )
 
         # case 3: absolute path inside repo's directory
         if os.path.commonprefix([filepath, self.dir]) == self.dir:
             relative_path = restore_dot(os.path.relpath(filepath,
                                                         start=self.dir))
-            return DotfilePath(
-                relative=normalize_path(relative_path),
-                in_home=os.path.join(self.home_dir, relative_path),
-                in_repo=filepath,
+            return Dotfile(
+                path=normalize_path(relative_path),
+                home_path=os.path.join(self.home_dir, relative_path),
+                repo_path=filepath,
             )
 
         raise ValueError("invalid dotfile path")
@@ -326,6 +336,3 @@ class DotfileRepo(object):
             "remove %s" % ", ".join(remove) if remove else "",
         )))
         self.git_repo.index.commit("[moredots] %s" % message.capitalize())
-
-
-DotfilePath = namedtuple('DotfilePath', ['relative', 'in_home', 'in_repo'])

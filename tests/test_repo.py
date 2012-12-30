@@ -83,7 +83,7 @@ class TestRemove(object):
     def test_remove_existing_file(self, filled_repo):
         repo = filled_repo
 
-        dotfile = next(repo.dotfiles)
+        dotfile = next(repo.dotfiles).path
         repo.remove(dotfile)
 
         _, name = os.path.split(dotfile)
@@ -92,13 +92,13 @@ class TestRemove(object):
     def test_remove_nonexistent_file(self, filled_repo):
         repo = filled_repo
 
-        dotfile = next(repo.dotfiles) + '_does_not_exist'
+        dotfile = next(repo.dotfiles).path + '_does_not_exist'
         with pytest.raises(exc.DotfileNotFoundError):
             repo.remove(dotfile)
 
     def test_remove_same_file_twice(self, filled_repo):
         repo = filled_repo
-        dotfile = next(repo.dotfiles)
+        dotfile = next(repo.dotfiles).path
 
         repo.remove(dotfile)
         with pytest.raises(exc.DotfileNotFoundError):
