@@ -6,7 +6,6 @@ import argparse
 
 import git
 
-from moredots import exc
 from moredots.repo import DotfileRepo
 
 
@@ -109,7 +108,7 @@ def configure_install(subparsers):
 def add_repo_argument(parser, *args, **kwargs):
     """Include the argument representing local moredots repository.
 
-    :param existing: Whether the repo is expected to existing or not.
+    :param existing: Whether the repo is expected to exist or not.
                      Must be supplied as keyword. ``True`` by default.
     :param desc: Description of the repo argument, which can be somewhat
                  specific to particular command. Must be supplied as keyword.
@@ -126,14 +125,14 @@ def add_repo_argument(parser, *args, **kwargs):
     help_text = (
         "By default, the repository in ~/dotfiles will be used."
         if existing else "By default, it will be placed in ~/dotfiles.")
+    arg_type = dotfile_repo if existing else str
     kwargs.update(
+        type=arg_type,
         metavar="DIRECTORY",
         help="Specify %s. %s" % (desc, help_text),
         nargs='?',  # optional
-        default=os.path.expanduser('~/dotfiles'),
+        default=arg_type(os.path.expanduser('~/dotfiles')),
     )
-    if existing:
-        kwargs['type'] = dotfile_repo
 
     parser.add_argument(*args, **kwargs)
 
@@ -193,13 +192,10 @@ def add_home_dir_argument(parser):
 
 def dotfile_repo(repo_dir):
     """argparse argument type for converting paths to moredots repositories
-    into :class:`DotfileRepo` objects automatically.
-    """
+into :class:`DotfileRepo` objects automatically.
+"""
     try:
         return DotfileRepo(repo_dir)
     except git.InvalidGitRepositoryError:
         msg = "fatal: %s is not a moredots repository" % repo_dir
-        raise argparse.ArgumentError(msg)
-    except exc.InvalidRepositoryError:
-        msg = "fatal: %s is invalid moredots repository" % repo_dir
         raise argparse.ArgumentError(msg)

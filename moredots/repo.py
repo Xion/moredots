@@ -34,12 +34,6 @@ class DotfileRepo(object):
         if isinstance(repo, basestring):
             repo = git.Repo(repo, odbt=git.GitCmdObjectDB)
 
-        # integrity checks for repository
-        home_file = os.path.join(repo.git_dir, HOME_FILE)
-        if not all([git.repo.fun.is_git_dir(repo.git_dir),
-                    os.path.exists(home_file)]):
-            raise exc.InvalidRepositoryError(repo.working_dir)
-
         self.git_repo = repo
         self.inventory = Inventory(self)
 
@@ -223,6 +217,15 @@ class DotfileRepo(object):
             self._home_dir = value
 
         return locals()
+
+    @property
+    def is_valid(self):
+        """Whether repository is a valid one, i.e. contains all the necessary
+        files and information.
+        """
+        home_file = os.path.join(self.dir, HOME_FILE)
+        return all([git.repo.fun.is_git_dir(self.git_repo.git_dir),
+                    os.path.exists(home_file)])
 
     # Internal methods
 

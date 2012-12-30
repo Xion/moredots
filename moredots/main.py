@@ -18,7 +18,17 @@ def main():
     command = args.pop('command')
     command_handler = globals()['handle_%s' % command]
     with error_handler(command):
+        check_repo_arg(args)
         return command_handler(**args)
+
+
+def check_repo_arg(args):
+    """Check that repository argument, if provided,
+    points to existing and valid moredots repository.
+    """
+    repo = args.get('repo')
+    if repo and not repo.is_valid:
+        raise exc.InvalidRepositoryError(repo.dir)
 
 
 # Handlers for different commands
@@ -63,6 +73,8 @@ def error_handler(command):
         yield
     except exc.RepositoryExistsError, e:
         print "fatal: a repository already exists in " + e.repo_dir
+    except exc.InvalidRepositoryError, e:
+        print "fatal: %s is not a valid moredots repository" % e.repo_dir
     except exc.InvalidHomeDirError, e:
         print "fatal: cannot use %s as home directory" % e.home_dir
     except exc.DuplicateDotfileError, e:
