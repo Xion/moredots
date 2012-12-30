@@ -252,7 +252,13 @@ class DotfileRepo(object):
 
             if os.path.exists(home_path):
                 os.unlink(home_path)
-            os.symlink(repo_path, home_path)  # TODO: support hardlinks
+
+            # install the dotfile, creating a (sym)link from home directory
+            relative_filepath = os.path.relpath(repo_path, start=self.dir)
+            is_hardlink = (self.inventory[relative_filepath].hardlink
+                           if relative_filepath in self.inventory else False)
+            link_func = os.link if is_hardlink else os.symlink
+            link_func(repo_path, home_path)
 
     def _filepath_pair(self, filepath):
         """Given a path to a dotfile, returns a pair of paths to this dotfile
@@ -267,6 +273,9 @@ class DotfileRepo(object):
         """
         if not filepath:
             raise ValueError("empty dotfile path")
+
+        # TODO: make this function also return relative path,
+        # (returning namedtuple with attributes: in_home, in_repo, relative)
 
         # case 1: relative path
         if not os.path.isabs(filepath):
