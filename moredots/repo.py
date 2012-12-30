@@ -274,9 +274,6 @@ class DotfileRepo(object):
 
         .. note;: Existence of either of files involved is not checked.
         """
-        # TODO: turn `Dotfile` into proper class
-        # and put all this code inside its constructor
-
         if not filepath:
             raise ValueError("empty dotfile path")
 
