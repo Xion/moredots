@@ -46,6 +46,14 @@ def relative_path(path, base):
     return path
 
 
+def normalize_path(path):
+    """Normalizes relative path, removing superficial differences
+    such as `./` segments.
+    :return: Normalized path
+    """
+    return os.path.normpath(os.path.join('.', path))
+
+
 def remove_dot(path):
     """Removes the leading dot from the childmost path fragment.
     :return: Modified path
