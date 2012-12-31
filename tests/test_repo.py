@@ -9,9 +9,7 @@ from moredots import exc
 from moredots.repo import DotfileRepo
 
 
-# TODO: add tests for:
-# - hardlinked dotfiles
-# - files inside dot-directories
+# TODO: there's lot of repetition here, especially in asserts; refactor
 
 
 # Tests
@@ -106,6 +104,28 @@ class TestAdd(object):
         with pytest.raises(exc.DuplicateDotfileError):
             repo.add(dotdir_file_in_home)
 
+    def test_add_file_as_hardlink(self, empty_repo, dotfile_in_home):
+        repo = empty_repo
+        repo.add(dotfile_in_home, hardlink=True)
+
+        _, name = os.path.split(dotfile_in_home)
+        dotfile_in_repo = os.path.join(repo.dir, name[1:])
+        assert (os.path.exists(dotfile_in_repo)
+                and not os.path.islink(dotfile_in_repo))
+        assert os.path.exists(dotfile_in_home)
+
+    def test_add_dotdir_file_as_hardlink(self, empty_repo, home_dir,
+                                         dotdir_file_in_home):
+        repo = empty_repo
+        repo.add(dotdir_file_in_home, hardlink=True)
+
+        dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
+        dotdir_file_in_repo = os.path.join(repo.dir, dotdir_file[1:])
+
+        assert (os.path.exists(dotdir_file_in_repo)
+                and not os.path.islink(dotdir_file_in_repo))
+        assert os.path.exists(dotdir_file_in_home)
+
 
 class TestRemove(object):
 
@@ -115,8 +135,7 @@ class TestRemove(object):
         dotfile = next(repo.dotfiles).path
         repo.remove(dotfile)
 
-        _, name = os.path.split(dotfile)
-        assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+        assert not os.path.exists(os.path.join(repo.dir, dotfile))
 
     def test_remove_nonexistent_file(self, filled_repo):
         repo = filled_repo
