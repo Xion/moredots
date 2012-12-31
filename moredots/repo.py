@@ -94,8 +94,15 @@ class DotfileRepo(object):
         :raise: ``exc.DuplicateDotfileError`` if the file already exists
         """
         dotfile = self._dotfile(path)
+        if not os.path.exists(dotfile.home_path):
+            raise exc.DotfileNotFoundError(dotfile.path, repo=self)
         if os.path.exists(dotfile.repo_path):
             raise exc.DuplicateDotfileError(dotfile.path, repo=self)
+
+        # ensure all leading directories (if any) exist in the repository
+        if os.path.sep in dotfile.path:
+            dotdir_path, _ = os.path.split(dotfile.repo_path)
+            os.makedirs(dotdir_path)
 
         # perform replacement, producing (sym)link in place of actual file
         link_func = os.link if hardlink else os.symlink

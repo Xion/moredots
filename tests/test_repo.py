@@ -9,6 +9,11 @@ from moredots import exc
 from moredots.repo import DotfileRepo
 
 
+# TODO: add tests for:
+# - hardlinked dotfiles
+# - files inside dot-directories
+
+
 # Tests
 
 class TestInit(object):
@@ -76,6 +81,14 @@ class TestAdd(object):
 
         with pytest.raises(exc.DuplicateDotfileError):
             repo.add(dotfile_in_home)
+
+    def test_add_dotdir_file_to_empty(self, empty_repo, home_dir,
+                                      dotdir_file_in_home):
+        repo = empty_repo
+        repo.add(dotdir_file_in_home)
+
+        dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
+        assert os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
 
 
 class TestRemove(object):

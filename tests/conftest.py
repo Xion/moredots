@@ -78,9 +78,33 @@ def filled_remote_url(remote_dir, home_dir):
 @pytest.fixture
 def dotfile_in_home(home_dir, dotfile_name):
     """A dotfile inside home directory.
-    :return: Name of a dotfile
+    :return: Path to a dotfile
     """
     path = os.path.join(home_dir, dotfile_name)
+    with open(path, 'w') as f:
+        print >>f, random_string()
+    return path
+
+
+@pytest.fixture
+def dotdir_in_home(home_dir):
+    """An empty dot-directory within $HOME dir (.e.g ~/.config/foo).
+    Only the first directory has a leading dot.
+    """
+    path_segments = [home_dir, dotfile_name()]
+    path_segments += [filename() for _ in xrange(random.randint(1, 3))]
+    path = os.path.join(*path_segments)
+
+    os.makedirs(path)
+    return path
+
+
+@pytest.fixture
+def dotdir_file_in_home(dotdir_in_home, filename):
+    """A file inside dot-directory within home directory (~/.config/foo/bar).
+    :return: Path to a dotfile
+    """
+    path = os.path.join(dotdir_in_home, filename)
     with open(path, 'w') as f:
         print >>f, random_string()
     return path
@@ -90,3 +114,9 @@ def dotfile_in_home(home_dir, dotfile_name):
 def dotfile_name():
     """Random name of a dotfile (without any path fragment)."""
     return "." + random_string(chars=string.ascii_letters, length=16)
+
+
+@pytest.fixture
+def filename():
+    """Random file name (without leading dot)."""
+    return random_string(chars=string.ascii_letters, length=8)

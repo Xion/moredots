@@ -37,8 +37,9 @@ class DuplicateDotfileError(DotfileError):
 
 
 class DotfileNotFoundError(DotfileError):
-    """Error raised when tryng to remove a non-exsiting dotfile
-    from dotfile repository.
+    """Error raised when tryng to operate on non-existing dotfile,
+    e.g. remove one from repository when it isn't there
+    or add a non-existing dotfile from $HOME to the repository.
     """
     pass
 
