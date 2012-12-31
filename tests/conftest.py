@@ -45,9 +45,13 @@ def filled_repo(repo_dir, home_dir):
     """Moredots repository with at least one dotfile."""
     repo = DotfileRepo.init(repo_dir, home_dir)
 
-    # add some dotfiles
-    for _ in xrange(random.randint(1, 5)):
+    # add some dotfiles (both in root and inside dot-directories)
+    for _ in xrange(random.randint(1, 3)):
         repo.add(dotfile_in_home(home_dir, dotfile_name()))
+    for _ in xrange(random.randint(1, 3)):
+        dotdir_file = dotdir_file_in_home(dotdir_in_home(home_dir),
+                                          filename())
+        repo.add(dotdir_file)
 
     return repo
 
