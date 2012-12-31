@@ -90,6 +90,22 @@ class TestAdd(object):
         dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
         assert os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
 
+    def test_add_dotdir_file_to_nonempty(self, filled_repo, home_dir,
+                                         dotdir_file_in_home):
+        repo = filled_repo
+        repo.add(dotdir_file_in_home)
+
+        dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
+        assert os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
+
+    def test_add_existing_dotdir_file(self, empty_repo, home_dir,
+                                      dotdir_file_in_home):
+        repo = empty_repo
+        repo.add(dotdir_file_in_home)
+
+        with pytest.raises(exc.DuplicateDotfileError):
+            repo.add(dotdir_file_in_home)
+
 
 class TestRemove(object):
 
@@ -125,6 +141,15 @@ def test_add_and_remove_file(empty_repo, dotfile_in_home):
 
     _, name = os.path.split(dotfile_in_home)
     assert not os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+def test_add_and_remove_dotdir_file(empty_repo, home_dir, dotdir_file_in_home):
+    repo = empty_repo
+    repo.add(dotdir_file_in_home)
+    repo.remove(dotdir_file_in_home)
+
+    dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
+    assert not os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
 
 
 class TestSync(object):
