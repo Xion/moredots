@@ -9,9 +9,6 @@ from moredots import exc
 from moredots.repo import DotfileRepo
 
 
-# TODO: there's lot of repetition here, especially in asserts; refactor
-
-
 # Tests
 
 class TestInit(object):
@@ -62,16 +59,12 @@ class TestAdd(object):
     def test_add_file_to_empty(self, empty_repo, dotfile_in_home):
         repo = empty_repo
         repo.add(dotfile_in_home)
-
-        _, name = os.path.split(dotfile_in_home)
-        assert os.path.exists(os.path.join(repo.dir, name[1:]))
+        assert dotfile_exists(dotfile_in_home, repo)
 
     def test_add_file_to_nonempty(self, filled_repo, dotfile_in_home):
         repo = filled_repo
         repo.add(dotfile_in_home)
-
-        _, name = os.path.split(dotfile_in_home)
-        assert os.path.exists(os.path.join(repo.dir, name[1:]))
+        assert dotfile_exists(dotfile_in_home, repo)
 
     def test_add_existing_file(self, empty_repo, dotfile_in_home):
         repo = empty_repo
@@ -84,17 +77,13 @@ class TestAdd(object):
                                       dotdir_file_in_home):
         repo = empty_repo
         repo.add(dotdir_file_in_home)
-
-        dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
-        assert os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
+        assert dotdir_file_exists(dotdir_file_in_home, home_dir, repo)
 
     def test_add_dotdir_file_to_nonempty(self, filled_repo, home_dir,
                                          dotdir_file_in_home):
         repo = filled_repo
         repo.add(dotdir_file_in_home)
-
-        dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
-        assert os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
+        assert dotdir_file_exists(dotdir_file_in_home, home_dir, repo)
 
     def test_add_existing_dotdir_file(self, empty_repo, home_dir,
                                       dotdir_file_in_home):
@@ -228,3 +217,24 @@ class TestSync(object):
     def test_sync_with_unrelated_remote(self, filled_repo, filled_remote_url):
         with pytest.raises(exc.UnrelatedRemoteError):
             filled_repo.sync(filled_remote_url)
+
+
+# Utility functions
+
+def dotfile_exists(dotfile_in_home, repo):
+    """Checks that dotfile with given $HOME path exists
+    in given dotfile repository.
+
+    .. note:: This doesn't work for files in dot-directories,
+              use :func:`dotdir_file_exists` instead
+    """
+    _, name = os.path.split(dotfile_in_home)
+    return os.path.exists(os.path.join(repo.dir, name[1:]))
+
+
+def dotdir_file_exists(dotdir_file_in_home, home_dir, repo):
+    """Checks that files inside dot-directory with given $HOME path
+    exists in given dotfile repository.
+    """
+    dotdir_file = os.path.relpath(dotdir_file_in_home, start=home_dir)
+    return os.path.exists(os.path.join(repo.dir, dotdir_file[1:]))
